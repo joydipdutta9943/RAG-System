@@ -27,7 +27,6 @@ const startServer = async () => {
 
 		// Initialize application services with database and redis
 		const db = database.db();
-		await embeddingService.initializeModel();
 		await vectorSearchService.initialize(db, redis);
 		aiAgentLangchainService.initialize();
 

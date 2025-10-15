@@ -47,8 +47,8 @@ export const RATE_LIMIT_CONFIG = {
 
 // AI Service constants
 export const AI_CONFIG = {
-	DEFAULT_MODEL: "Xenova/all-MiniLM-L6-v2",
-	DEFAULT_IMAGE_MODEL: "Xenova/clip-vit-base-patch32",
+	DEFAULT_MODEL: "text-embedding-004",
+	DEFAULT_IMAGE_MODEL: "multimodalembedding",
 	MAX_CONTEXT_LENGTH: 4096,
 	TEMPERATURE: 0.7,
 	MAX_TOKENS: 1000,
@@ -56,9 +56,9 @@ export const AI_CONFIG = {
 
 // Vector search constants
 export const VECTOR_CONFIG = {
-	DEFAULT_MODEL: "Xenova/all-MiniLM-L6-v2",
-	DEFAULT_IMAGE_MODEL: "Xenova/clip-vit-base-patch32",
-	DEFAULT_DIMENSIONS: 384,
+	DEFAULT_MODEL: "text-embedding-004",
+	DEFAULT_IMAGE_MODEL: "multimodalembedding",
+	DEFAULT_DIMENSIONS: 768, // Google's text-embedding-004 produces 768-dimensional embeddings
 	SIMILARITY_THRESHOLD: 0.7,
 	MAX_CANDIDATES: 100,
 	DEFAULT_LIMIT: 10,

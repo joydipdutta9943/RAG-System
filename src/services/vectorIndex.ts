@@ -213,7 +213,7 @@ const createDocumentVectorIndex = async (): Promise<string> => {
 				{
 					type: "vector",
 					path: "embedding",
-					numDimensions: 384, // Based on your embedding service dimensions
+					numDimensions: 768, // Google's text-embedding-004 produces 768-dimensional embeddings
 					similarity: "cosine",
 					quantization: "scalar", // Enable automatic quantization for better performance
 				},

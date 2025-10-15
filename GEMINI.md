@@ -608,8 +608,7 @@ import "./src/main";
 - **Cache**: Redis
 - **AI/ML**:
   - LangChain for AI agent functionality
-  - @xenova/transformers for embeddings
-  - Google Generative AI integration
+  - Google Generative AI integration for embeddings and generative AI
   - Tesseract.js for OCR
 - **Validation**: express-validator + class-validator
 - **File Processing**:

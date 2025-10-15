@@ -1,24 +1,7 @@
 version: '3.8'
 
 services:
-  # MongoDB Database
-  mongodb:
-    image: mongo:7.0
-    container_name: rag-mongodb
-    restart: unless-stopped
-    ports:
-      - "27017:27017"
-    environment:
-      MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USERNAME:-admin}
-      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD:-change-me}
-      MONGO_INITDB_DATABASE: enhanced-rag-system
-    volumes:
-      - mongodb_data:/data/db
-      - ./mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
-    networks:
-      - rag-network
-
-  # Redis Cache
+  # Redis Cache (for caching embeddings and search results)
   redis:
     image: redis:7.2-alpine
     container_name: rag-redis
@@ -40,10 +23,11 @@ services:
       - "3000:3000"
     environment:
       NODE_ENV: production
-      DATABASE_URL: mongodb://${MONGO_INITDB_ROOT_USERNAME:-admin}:${MONGO_INITDB_ROOT_PASSWORD:-change-me}@mongodb:27017/enhanced-rag-system?authSource=admin
+      # MongoDB Atlas connection (set in .env file)
+      DATABASE_URL: ${DATABASE_URL}
       REDIS_URL: redis://redis:6379
       JWT_SECRET: ${JWT_SECRET:-change-me}
-      GOOGLE_AI_API_KEY: ${GOOGLE_AI_API_KEY}
+      GOOGLE_AI_API_KEY: ${GOOGLE_AI_API_KEY}  # Required for embeddings and AI features
       PORT: 3000
       MAX_FILE_SIZE: 50000000
       UPLOAD_PATH: /usr/src/app/uploads
@@ -51,7 +35,6 @@ services:
       - uploads_data:/usr/src/app/uploads
       - logs_data:/usr/src/app/logs
     depends_on:
-      - mongodb
       - redis
     networks:
       - rag-network
@@ -62,7 +45,6 @@ services:
       retries: 3
 
 volumes:
-  mongodb_data:
   redis_data:
   uploads_data:
   logs_data:

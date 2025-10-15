@@ -9,6 +9,7 @@ RUN apt-get update && apt-get install -y \
     tesseract-ocr-eng \
     imagemagick \
     ghostscript \
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy package files
@@ -40,6 +41,7 @@ RUN apt-get update && apt-get install -y \
     tesseract-ocr-eng \
     imagemagick \
     ghostscript \
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy built application
@@ -56,12 +58,12 @@ RUN groupadd -r appuser && useradd -r -g appuser appuser
 RUN chown -R appuser:appuser /usr/src/app
 USER appuser
 
-# Expose port
+# Expose port for HTTP and WebSocket (Socket.IO)
 EXPOSE 3000
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
     CMD curl -f http://localhost:3000/health || exit 1
 
-# Start the application
+# Start the application (supports both HTTP and WebSocket connections)
 CMD ["bun", "run", "start"]

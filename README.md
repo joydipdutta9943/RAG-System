@@ -1,14 +1,24 @@
 # Enhanced RAG System
 
-A multi-modal RAG (Retrieval-Augmented Generation) system with Node.js backend and AI processing capabilities.
+A multi-modal RAG (Retrieval-Augmented Generation) system with Node.js backend and Google AI integration for advanced embedding capabilities.
+
+## Features
+
+- **Google AI Embeddings**: Uses Google's `text-embedding-004` model for high-quality 768-dimensional embeddings
+- **Multi-modal Support**: Process PDFs, images, and text files
+- **Vector Search**: Semantic search with MongoDB Atlas vector search
+- **AI-Powered Search**: Context-aware search using Google's Gemini models
+- **Real-time Processing**: WebSocket support for live document processing updates
+- **Authentication & Authorization**: JWT-based auth with role management
 
 ## Prerequisites
 
 - [Bun](https://bun.sh) runtime (v1.2.16 or higher)
 - [Docker](https://docker.com) and Docker Compose
 - [Node.js](https://nodejs.org) (v18+ recommended)
-- MongoDB database
+- MongoDB database (local or MongoDB Atlas)
 - Redis server
+- Google AI API key (for embeddings and generative AI)
 
 ## Environment Setup
 
@@ -23,12 +33,14 @@ cp .env.example .env
 ```bash
 # Database
 DATABASE_URL="mongodb://localhost:27017/enhanced-rag-system"
+# Or for MongoDB Atlas:
+# DATABASE_URL="mongodb+srv://<username>:<password>@cluster-url/enhanced-rag-system?retryWrites=true&w=majority"
 
 # Redis
 REDIS_URL="redis://localhost:6379"
 
-# API Keys
-GOOGLE_AI_API_KEY="your_gemini_api_key"
+# Google AI API (Required for embeddings and generative AI)
+GOOGLE_AI_API_KEY="your_google_ai_api_key"
 
 # Authentication
 JWT_SECRET="your_jwt_secret_key"
@@ -42,6 +54,13 @@ NODE_ENV="development"
 MAX_FILE_SIZE="50mb"
 UPLOAD_PATH="./uploads"
 ```
+
+## Getting Google AI API Key
+
+1. Visit [Google AI Studio](https://makersuite.google.com/app/apikey)
+2. Create a new API key
+3. Copy the key and add it to your `.env` file
+4. The API provides free tier limits (60 requests/minute for embeddings)
 
 ## Installation
 
@@ -57,12 +76,16 @@ bun install
 # Generate Prisma client
 bun run db:generate
 
-# Run database migrations
-bun run db:migrate
-
-# Or push schema directly (for development)
+# Push schema to database (creates collections)
 bun run db:push
+
+# Optional: View and manage data
+bun run db:studio
 ```
+
+### 4. Verify Google AI Integration
+
+The system will automatically use Google's embedding API when processing documents. No additional setup is required beyond setting the API key.
 
 ## Development
 
@@ -82,6 +105,8 @@ bun run dev
 ```bash
 docker-compose up -d
 ```
+
+This will start Redis and other supporting services.
 
 ### Individual Commands
 
@@ -201,27 +226,32 @@ curl http://localhost:3000/health
 
 ## Key Features to Test
 
-1. **Multi-modal Document Processing:**
+1. **Google AI Integration:**
+   - Automatic 768-dimensional embeddings using Google's `text-embedding-004` model
+   - Generative AI responses with Google's Gemini models
+   - Cost-effective with free tier limits
+
+2. **Multi-modal Document Processing:**
    - Upload PDFs, images, text files
    - OCR processing for images
-   - Text extraction and embedding generation
+   - Text extraction and automatic embedding generation
 
-2. **AI-Powered Search:**
-   - Semantic search using embeddings
-   - AI-generated summaries
-   - Relevance scoring
+3. **AI-Powered Search:**
+   - Semantic search using Google embeddings
+   - Hybrid search combining vector and text search
+   - AI-generated summaries and responses
 
-3. **Real-time Features:**
-   - Live processing status
+4. **Real-time Features:**
+   - Live processing status via WebSocket
    - Real-time notifications
    - Collaborative features
 
-4. **Analytics:**
+5. **Analytics:**
    - Usage metrics
    - Search analytics
    - Performance monitoring
 
-5. **Authentication & Authorization:**
+6. **Authentication & Authorization:**
    - JWT-based authentication
    - Role-based access control
    - Session management
@@ -276,15 +306,36 @@ bun run check
 Enhanced-RAG-System/
 ├── src/                    # Backend source code
 │   ├── config/            # Configuration files
+│   ├── controllers/       # API route handlers
 │   ├── middleware/        # Express middleware
+│   ├── repositories/      # Data access layer
 │   ├── routes/           # REST API routes
 │   ├── services/         # Business logic services
-│   └── server.ts         # Main server file
+│   ├── types/            # TypeScript type definitions
+│   ├── utils/            # Utility functions
+│   └── main.ts           # Application entry point
 ├── prisma/             # Database schema and migrations
+├── scripts/            # Utility scripts (e.g., migration scripts)
 ├── uploads/            # File uploads directory
-├── scripts/            # Utility scripts
-└── docker-compose.yml  # Docker services
+├── models/             # Legacy local models (no longer used)
+└── docker-compose.yml  # Docker services configuration
 ```
+
+## Architecture Changes
+
+### Embedding System
+- **Before**: Used local Xenova/all-MiniLM-L6-v2 model (384 dimensions)
+- **After**: Uses Google's text-embedding-004 API (768 dimensions)
+- **Benefits**:
+  - No local model files needed (23MB saved)
+  - Better performance with Google's optimized infrastructure
+  - Higher quality embeddings
+  - Simplified deployment
+
+### Vector Index
+- Automatically creates/updates MongoDB Atlas vector search index
+- Supports 768-dimensional vectors
+- Includes filter fields for userId and fileType
 
 ## Production Deployment
 
@@ -295,12 +346,38 @@ bun run build
 ```
 
 2. **Set production environment variables**
+   - Configure MongoDB Atlas connection string
+   - Set Redis connection URL
+   - Add Google AI API key
+   - Set secure JWT secret
 
 3. **Start production servers:**
 
 ```bash
 bun run start  # Backend
 ```
+
+## Monitoring Google AI Usage
+
+Monitor your Google AI API usage:
+- Free tier: 60 requests/minute for embeddings
+- Pricing: ~$0.00025 per 1,000 characters beyond free tier
+- The system implements caching to reduce API calls
+- Check the `/api/search/ai-status` endpoint for usage statistics
+
+## Migration from Local Models
+
+If migrating from a previous version with local models:
+
+1. **Backup existing data** (optional)
+2. **Delete old embeddings** (required due to dimension change)
+3. **Run the migration script** (optional, handles index recreation):
+   ```bash
+   bun run scripts/migrate-vector-dimensions.ts
+   ```
+4. **Re-upload documents** to generate new 768-dimensional embeddings
+
+The application will automatically handle the new vector index creation when started.
 
 ## License
 

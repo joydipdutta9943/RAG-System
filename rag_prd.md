@@ -20,7 +20,7 @@ To create a production-ready, enterprise-grade RAG system that:
 
 - **Backend**: Express.js with functional programming patterns, Node.js with Bun
 - **Database**: MongoDB with Prisma ORM (fully implemented)
-- **Embedding**: Open-source models (Xenova/all-MiniLM-L6-v2) with local transformers
+- **Embedding**: Google AI text-embedding-004 API (768 dimensions)
 - **Package Manager**: Bun (fully implemented)
 - **Search**: MongoDB Atlas Vector Search with fallback in-app similarity
 - **Real-time**: Socket.IO for collaborative features
@@ -31,7 +31,7 @@ To create a production-ready, enterprise-grade RAG system that:
 
 - **Backend**: Express.js with functional programming patterns
 - **Database**: MongoDB with Prisma ORM (complete)
-- **Embedding**: Open-source models (all-MiniLM-L6-v2)
+- **Embedding**: Google AI text-embedding-004 API (768 dimensions)
 - **Package Manager**: Bun (complete)
 - **Search**: MongoDB Atlas Vector Search optimized
 - **Real-time**: Socket.IO for collaborative features
@@ -75,8 +75,8 @@ To create a production-ready, enterprise-grade RAG system that:
 
 #### Requirements
 
-- **Primary Model**: `all-MiniLM-L6-v2` (sentence-transformers)
-- **Local Processing**: Eliminate API costs for embeddings
+- **Primary Model**: Google's `text-embedding-004` (768 dimensions)
+- **Cloud Processing**: High-quality embeddings with Google's infrastructure
 - **Caching**: Redis-based caching for computed embeddings
 - **Multi-Modal**: Support for both text and image embeddings
 
@@ -94,13 +94,13 @@ To create a production-ready, enterprise-grade RAG system that:
 - **Image Processing**: OCR, AI-powered description, similarity search
 - **Document Processing**: PDF, text, and image file support
 - **Search Capabilities**: Text, image, and multi-modal search
-- **AI Integration**: Local embeddings with transformers
+- **AI Integration**: Google embeddings and Gemini generative AI
 
 #### Implementation Status: **LARGELY COMPLETE**
 
 - ✅ Image processing with OCR using Tesseract.js
 - ✅ Multi-modal document processing (PDF, text, images)
-- ✅ Local embedding generation using Xenova transformers
+- ✅ Cloud-based embedding generation using Google AI API
 - ✅ Document analysis with entity extraction and sentiment analysis
 - ⚠️ Advanced chart/graph recognition (basic only)
 - ⚠️ AI-powered image description (placeholder implementation)
@@ -245,7 +245,7 @@ To create a production-ready, enterprise-grade RAG system that:
 
 1. **Database/ORM Migration**: Prisma integration complete
 2. **Package Manager**: Full Bun migration with optimized scripts
-3. **Open-Source Embeddings**: Local Xenova transformers integration
+3. **Google AI Integration**: Cloud-based embeddings with 768-dimensional vectors
 4. **Vector Search System**: MongoDB Atlas with hybrid search and fallbacks
 5. **Document Processing**: Multi-modal processing with OCR and embeddings
 6. **Real-time Infrastructure**: Socket.IO with room management
