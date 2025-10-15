@@ -315,7 +315,6 @@ const imageSearchHandler = async (
 				documentTitle: r.document.title,
 				description: r.description,
 				ocrText: r.ocrText,
-				imagePath: r.imagePath,
 			})),
 			metadata: {
 				processingTime: aiResponse.processingTime,

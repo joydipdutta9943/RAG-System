@@ -1,4 +1,3 @@
-import fs from "node:fs/promises";
 import path from "node:path";
 import pdf from "pdf-parse";
 import sharp from "sharp";
@@ -11,28 +10,29 @@ import type {
 import embeddingService from "./embeddingService.js";
 
 const processDocument = async (
-	filePath: string,
+	fileBuffer: Buffer,
 	originalName: string,
+	mimeType: string,
 	redisClient?: any,
 ): Promise<ProcessedDocument> => {
 	try {
 		const fileExtension = path.extname(originalName).toLowerCase();
-		const stats = await fs.stat(filePath);
+		const fileSize = fileBuffer.length;
 
 		logger.info(`Processing document: ${originalName} (${fileExtension})`);
 
 		switch (fileExtension) {
 			case ".pdf":
-				return await processPDF(filePath, stats.size, redisClient);
+				return await processPDF(fileBuffer, fileSize, redisClient);
 			case ".txt":
-				return await processTextFile(filePath, stats.size, redisClient);
+				return await processTextFile(fileBuffer, fileSize, redisClient);
 			case ".jpg":
 			case ".jpeg":
 			case ".png":
 			case ".gif":
 			case ".bmp":
 			case ".webp":
-				return await processImageFile(filePath, stats.size, redisClient);
+				return await processImageFile(fileBuffer, fileSize, redisClient);
 			default:
 				throw new Error(`Unsupported file type: ${fileExtension}`);
 		}
@@ -43,14 +43,13 @@ const processDocument = async (
 };
 
 const processPDF = async (
-	filePath: string,
+	fileBuffer: Buffer,
 	fileSize: number,
 	redisClient?: any,
 ): Promise<ProcessedDocument> => {
 	try {
 		// Extract text from PDF
-		const buffer = await fs.readFile(filePath);
-		const pdfData = await pdf(buffer);
+		const pdfData = await pdf(fileBuffer);
 
 		// Generate text embedding
 		const embedding = await embeddingService.generateTextEmbedding(
@@ -71,7 +70,7 @@ const processPDF = async (
 		const _sentiment = await analyzeSentiment(pdfData.text);
 
 		return {
-			title: path.basename(filePath, ".pdf"),
+			title: "PDF Document",
 			content: pdfData.text,
 			fileSize,
 			metadata: {
@@ -90,12 +89,12 @@ const processPDF = async (
 };
 
 const processTextFile = async (
-	filePath: string,
+	fileBuffer: Buffer,
 	fileSize: number,
 	redisClient?: any,
 ): Promise<ProcessedDocument> => {
 	try {
-		const content = await fs.readFile(filePath, "utf-8");
+		const content = fileBuffer.toString("utf-8");
 		const embedding = await embeddingService.generateTextEmbedding(
 			content,
 			redisClient,
@@ -106,7 +105,7 @@ const processTextFile = async (
 		const _sentiment = await analyzeSentiment(content);
 
 		return {
-			title: path.basename(filePath, ".txt"),
+			title: "Text Document",
 			content,
 			fileSize,
 			metadata: {
@@ -124,16 +123,16 @@ const processTextFile = async (
 };
 
 const processImageFile = async (
-	filePath: string,
+	fileBuffer: Buffer,
 	fileSize: number,
 	redisClient?: any,
 ): Promise<ProcessedDocument> => {
 	try {
-		const image = await processImage(filePath, redisClient);
+		const image = await processImage(fileBuffer, redisClient);
 		const embedding = image.embedding;
 
 		return {
-			title: path.basename(filePath),
+			title: "Image Document",
 			content: image.ocrText || "",
 			fileSize,
 			metadata: {
@@ -149,12 +148,11 @@ const processImageFile = async (
 };
 
 const processImage = async (
-	imagePath: string,
+	imageBuffer: Buffer,
 	redisClient?: any,
 ): Promise<ProcessedImage> => {
 	try {
 		// Get image metadata
-		const imageBuffer = await fs.readFile(imagePath);
 		const metadata = await sharp(imageBuffer).metadata();
 
 		// Perform OCR
@@ -176,7 +174,6 @@ const processImage = async (
 		const description = await generateImageDescription(imageBuffer);
 
 		return {
-			imagePath,
 			description,
 			ocrText: ocrResult.data.text.trim(),
 			embedding,
@@ -360,25 +357,6 @@ const extractKeywords = (text: string): string[] => {
 		.map(([word]) => word);
 };
 
-const validateDocumentFile = async (filePath: string): Promise<boolean> => {
-	try {
-		await fs.access(filePath);
-		const stats = await fs.stat(filePath);
-		return stats.isFile() && stats.size > 0;
-	} catch {
-		return false;
-	}
-};
-
-const cleanupTempFiles = async (filePath: string): Promise<void> => {
-	try {
-		await fs.unlink(filePath);
-		logger.info(`Cleaned up temporary file: ${filePath}`);
-	} catch (error) {
-		logger.warn(`Failed to clean up temporary file ${filePath}:`, error);
-	}
-};
-
 const documentProcessorService = {
 	processDocument,
 	processPDF,
@@ -392,8 +370,6 @@ const documentProcessorService = {
 	analyzeSentiment,
 	extractAuthor,
 	extractKeywords,
-	validateDocumentFile,
-	cleanupTempFiles,
 };
 
 export default documentProcessorService;

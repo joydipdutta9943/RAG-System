@@ -1,48 +1,11 @@
-import fs from "node:fs/promises";
 import path from "node:path";
 import type { NextFunction, Request, Response } from "express";
 import multer from "multer";
 import { logger } from "../config/logger.js";
 
-// Ensure upload directories exist
-const ensureUploadDirs = async () => {
-	const dirs = [
-		"./uploads",
-		"./uploads/documents",
-		"./uploads/images",
-		"./uploads/extracted",
-	];
-
-	for (const dir of dirs) {
-		try {
-			await fs.access(dir);
-		} catch {
-			await fs.mkdir(dir, { recursive: true });
-			logger.info(`Created upload directory: ${dir}`);
-		}
-	}
-};
-
-// Storage configuration
+// Storage configuration - using memory storage
 const createStorage = () => {
-	return multer.diskStorage({
-		destination: async (_req, file, cb) => {
-			try {
-				const isImage = file.mimetype.startsWith("image/");
-				const uploadPath = isImage ? "./uploads/images" : "./uploads/documents";
-				cb(null, uploadPath);
-			} catch (error) {
-				cb(error as Error, "./uploads");
-			}
-		},
-		filename: (_req, file, cb) => {
-			// Generate unique filename with timestamp
-			const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
-			const ext = path.extname(file.originalname);
-			const name = path.basename(file.originalname, ext);
-			cb(null, `${name}-${uniqueSuffix}${ext}`);
-		},
-	});
+	return multer.memoryStorage();
 };
 
 // File filter
@@ -172,10 +135,6 @@ const uploadMiddleware = {
 	uploadSingle,
 	uploadMultiple,
 	handleUploadError,
-	ensureUploadDirs,
 };
-
-// Initialize upload directories
-ensureUploadDirs();
 
 export default uploadMiddleware;

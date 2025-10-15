@@ -2,7 +2,6 @@ export interface Document {
 	id: string;
 	title: string;
 	content: string;
-	filePath: string;
 	fileType: string;
 	fileSize: number;
 	embedding?: number[];
@@ -20,7 +19,6 @@ export interface Document {
 export interface DocumentCreateData {
 	title: string;
 	content: string;
-	filePath: string;
 	fileType: string;
 	fileSize: number;
 	embedding?: number[];
@@ -65,7 +63,6 @@ export interface ProcessedDocument {
 }
 
 export interface ProcessedImage {
-	imagePath: string;
 	description?: string;
 	ocrText?: string;
 	embedding: number[];

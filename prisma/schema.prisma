@@ -30,7 +30,6 @@ model Document {
   id          String   @id @default(cuid()) @map("_id")
   title       String
   content     String
-  filePath    String
   fileType    String
   fileSize    Int
   embedding   Float[]
@@ -42,28 +41,27 @@ model Document {
   language    String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
-  
+
   // Relations
   userId      String
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   images      Image[]
-  
+
   @@map("documents")
 }
 
 model Image {
   id          String   @id @default(cuid()) @map("_id")
   documentId  String
-  imagePath   String
   description String?
   ocrText     String?
   embedding   Float[]
   metadata    Json?
   createdAt   DateTime @default(now())
-  
+
   // Relations
   document    Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
-  
+
   @@map("images")
 }
 

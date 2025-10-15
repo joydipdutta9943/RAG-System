@@ -13,6 +13,11 @@ services:
       - redis_data:/data
     networks:
       - rag-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
   # Enhanced RAG System API
   api:
@@ -26,16 +31,15 @@ services:
       # MongoDB Atlas connection (set in .env file)
       DATABASE_URL: ${DATABASE_URL}
       REDIS_URL: redis://redis:6379
-      JWT_SECRET: ${JWT_SECRET:-change-me}
+      JWT_SECRET: ${JWT_SECRET:-change-me-in-production}
       GOOGLE_AI_API_KEY: ${GOOGLE_AI_API_KEY}  # Required for embeddings and AI features
       PORT: 3000
       MAX_FILE_SIZE: 50000000
-      UPLOAD_PATH: /usr/src/app/uploads
     volumes:
-      - uploads_data:/usr/src/app/uploads
       - logs_data:/usr/src/app/logs
     depends_on:
-      - redis
+      redis:
+        condition: service_healthy
     networks:
       - rag-network
     healthcheck:
@@ -43,10 +47,10 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
+      start_period: 40s
 
 volumes:
   redis_data:
-  uploads_data:
   logs_data:
 
 networks:

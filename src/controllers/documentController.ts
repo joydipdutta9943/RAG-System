@@ -25,10 +25,11 @@ const uploadDocumentHandler = async (
 			`Processing document upload: ${file.originalname} for user: ${userId}`,
 		);
 
-		// Process the document
+		// Process the document from buffer
 		const processedDoc = await documentProcessorService.processDocument(
-			file.path,
+			file.buffer,
 			file.originalname,
+			file.mimetype,
 			undefined, // redisClient - pass undefined for now
 		);
 
@@ -56,7 +57,6 @@ const uploadDocumentHandler = async (
 			data: {
 				title: processedDoc.title,
 				content: processedDoc.content,
-				filePath: file.path,
 				fileType: file.mimetype,
 				fileSize: file.size,
 				embedding: documentEmbedding, // Store embedding in Prisma
@@ -68,7 +68,6 @@ const uploadDocumentHandler = async (
 				userId,
 				images: {
 					create: processedDoc.images.map((img) => ({
-						imagePath: img.imagePath,
 						description: img.description,
 						ocrText: img.ocrText,
 						embedding: img.embedding,
@@ -129,8 +128,9 @@ const batchUploadHandler = async (
 		for (const file of files) {
 			try {
 				const processedDoc = await documentProcessorService.processDocument(
-					file.path,
+					file.buffer,
 					file.originalname,
+					file.mimetype,
 				);
 				const entities = await documentProcessorService.extractEntities(
 					processedDoc.content,
@@ -148,7 +148,6 @@ const batchUploadHandler = async (
 					data: {
 						title: processedDoc.title,
 						content: processedDoc.content,
-						filePath: file.path,
 						fileType: file.mimetype,
 						fileSize: file.size,
 						embedding: processedDoc.embedding,
@@ -160,7 +159,6 @@ const batchUploadHandler = async (
 						userId,
 						images: {
 							create: processedDoc.images.map((img) => ({
-								imagePath: img.imagePath,
 								description: img.description,
 								ocrText: img.ocrText,
 								embedding: img.embedding,

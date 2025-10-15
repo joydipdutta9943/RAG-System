@@ -1,0 +1,84 @@
+version: '3.8'
+
+services:
+  # MongoDB for development
+  mongodb:
+    image: mongo:7.0
+    container_name: rag-mongodb
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: password
+      MONGO_INITDB_DATABASE: enhanced-rag-system
+    volumes:
+      - mongodb_data:/data/db
+    networks:
+      - rag-network
+    healthcheck:
+      test: ["CMD", "mongo", "--eval", "db.adminCommand('ping')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Redis Cache for development
+  redis:
+    image: redis:7.2-alpine
+    container_name: rag-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    networks:
+      - rag-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Enhanced RAG System API for development
+  api:
+    build: .
+    container_name: rag-api-dev
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: development
+      DATABASE_URL: mongodb://admin:password@mongodb:27017/enhanced-rag-system?authSource=admin
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: dev-jwt-secret-change-in-production
+      GOOGLE_AI_API_KEY: ${GOOGLE_AI_API_KEY}
+      PORT: 3000
+      MAX_FILE_SIZE: 50000000
+      LOG_LEVEL: debug
+    volumes:
+      - .:/usr/src/app
+      - /usr/src/app/node_modules
+      - logs_data:/usr/src/app/logs
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - rag-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+volumes:
+  mongodb_data:
+  redis_data:
+  logs_data:
+
+networks:
+  rag-network:
+    driver: bridge

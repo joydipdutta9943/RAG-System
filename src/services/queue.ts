@@ -31,9 +31,9 @@ export const analyticsQueue = new Bull("analytics processing", {
 // Initialize services
 // Services are now imported as functional modules from services/index.js
 
-// Document processing job
+// Document processing job - now processes already uploaded documents
 documentProcessingQueue.process("process-document", async (job) => {
-	const { filePath, originalName, documentId } = job.data;
+	const { documentId } = job.data;
 
 	try {
 		logger.info(`Processing document job: ${documentId}`);
@@ -41,49 +41,34 @@ documentProcessingQueue.process("process-document", async (job) => {
 		// Update progress
 		job.progress(10);
 
-		// Process document
-		const processedDoc = await documentProcessorService.processDocument(
-			filePath,
-			originalName,
-			undefined, // redisClient - pass undefined for now
+		// Get document from database
+		const document = await prisma.document.findUnique({
+			where: { id: documentId },
+		});
+
+		if (!document) {
+			throw new Error(`Document not found: ${documentId}`);
+		}
+
+		// Extract additional metadata from content
+		const entities = await documentProcessorService.extractEntities(
+			document.content,
+		);
+		const summary = await documentProcessorService.generateSummary(
+			document.content,
+		);
+		const sentiment = await documentProcessorService.analyzeSentiment(
+			document.content,
 		);
 		job.progress(50);
 
-		// Extract additional metadata
-		const entities = await documentProcessorService.extractEntities(
-			processedDoc.content,
-		);
-		const summary = await documentProcessorService.generateSummary(
-			processedDoc.content,
-		);
-		const sentiment = await documentProcessorService.analyzeSentiment(
-			processedDoc.content,
-		);
-		job.progress(80);
-
-		// Convert metadata to proper JSON format
-		const metadataJson = JSON.parse(JSON.stringify(processedDoc.metadata));
-
-		// Update document in database
+		// Update document in database with extracted metadata
 		await prisma.document.update({
 			where: { id: documentId },
 			data: {
-				content: processedDoc.content,
-				embedding: processedDoc.embedding,
-				metadata: metadataJson,
 				summary,
 				entities,
 				sentiment,
-				language: processedDoc.metadata.language,
-				images: {
-					create: processedDoc.images.map((img) => ({
-						imagePath: img.imagePath,
-						description: img.description,
-						ocrText: img.ocrText,
-						embedding: img.embedding,
-						metadata: JSON.parse(JSON.stringify(img.metadata)),
-					})),
-				},
 			},
 		});
 
@@ -160,8 +145,6 @@ embeddingQueue.on("failed", (job, err) => {
 
 // Queue utilities
 export const addDocumentProcessingJob = async (data: {
-	filePath: string;
-	originalName: string;
 	documentId: string;
 }) => {
 	return await documentProcessingQueue.add("process-document", data, {
