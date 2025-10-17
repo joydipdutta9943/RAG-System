@@ -39,7 +39,6 @@ logs/
 # Generated files
 *.tsbuildinfo
 package-lock.json
-bun.lock
 
 # Claude settings
 .claude/settings.local.json
