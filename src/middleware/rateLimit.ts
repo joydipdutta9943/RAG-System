@@ -17,6 +17,12 @@ const createRedisStore = (prefix: string = "rl:") => {
 	const incr = async (
 		key: string,
 	): Promise<{ totalHits: number; resetTime?: Date }> => {
+		// Check if Redis is connected
+		if (!redis || !redis.isOpen) {
+			// Fallback: return default values when Redis is not available
+			return { totalHits: 1, resetTime: new Date(Date.now() + windowMs) };
+		}
+
 		const redisKey = prefix + key;
 		// Increment hit counter
 		const totalHits = await redis.incr(redisKey);
@@ -32,11 +38,13 @@ const createRedisStore = (prefix: string = "rl:") => {
 	};
 
 	const decrement = async (key: string): Promise<void> => {
+		if (!redis || !redis.isOpen) return;
 		const redisKey = prefix + key;
 		await redis.decr(redisKey);
 	};
 
 	const resetKey = async (key: string): Promise<void> => {
+		if (!redis || !redis.isOpen) return;
 		const redisKey = prefix + key;
 		await redis.del(redisKey);
 	};

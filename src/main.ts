@@ -1,5 +1,7 @@
-import { createServer } from "node:http";
+import { createServer, type Server } from "node:http";
+import type { MongoClient } from "mongodb";
 import { Server as SocketIOServer } from "socket.io";
+import type { Logger } from "winston";
 import { logger } from "./config/logger.js";
 import loaderService from "./loaders/index.js";
 import errorHandlerMiddleware from "./middleware/errorHandlerMiddleware.js";
@@ -11,26 +13,46 @@ import searchRoutes from "./routes/search.js";
 // Import services
 import {
 	aiAgentLangchainService,
-	embeddingService,
 	vectorSearchService,
 } from "./services/index.js";
 import { APP_CONFIG } from "./utils/constantUtils.js";
 
-let server: any;
+let server: Server;
 let io: SocketIOServer;
 
 const startServer = async () => {
 	try {
+		console.log("🚀 Starting server initialization...");
+
 		// Initialize all services
 		const { database, redis, logger, express } =
 			await loaderService.initializeAllServices();
 
+		console.log("✅ Services initialized");
+
 		// Initialize application services with database and redis
 		const db = database.db();
-		await vectorSearchService.initialize(db, redis);
-		aiAgentLangchainService.initialize();
+		console.log("📦 Database instance retrieved");
 
-		// Create HTTP server
+		await vectorSearchService.initialize(db, redis);
+		console.log("🔍 Vector search service initialized");
+
+		aiAgentLangchainService.initialize();
+		console.log("🤖 AI agent service initialized");
+
+		// API routes - MUST be registered BEFORE creating HTTP server
+		express.use("/api/auth", authRoutes);
+		express.use("/api/documents", documentRoutes);
+		express.use("/api/search", searchRoutes);
+		express.use("/health", healthRoutes.setupHealthRoutes());
+
+		console.log("🛣️  Routes registered");
+
+		// Error handling - MUST be last
+		express.use(errorHandlerMiddleware.notFoundHandler);
+		express.use(errorHandlerMiddleware.errorHandler);
+
+		// Create HTTP server AFTER all routes are registered
 		server = createServer(express);
 		io = new SocketIOServer(server, {
 			cors: {
@@ -39,24 +61,19 @@ const startServer = async () => {
 			},
 		});
 
+		console.log("🌐 HTTP server and WebSocket created");
+
 		// Setup WebSocket handlers
 		setupWebSocketHandlers(io, logger);
-
-		// API routes
-		express.use("/api/auth", authRoutes);
-		express.use("/api/documents", documentRoutes);
-		express.use("/api/search", searchRoutes);
-		express.use("/health", healthRoutes.setupHealthRoutes());
-
-		// Error handling
-		express.use(errorHandlerMiddleware.notFoundHandler);
-		express.use(errorHandlerMiddleware.errorHandler);
 
 		// Graceful shutdown
 		setupGracefulShutdown(server, database, logger);
 
 		// Start server
 		server.listen(APP_CONFIG.PORT, () => {
+			console.log(
+				`🚀 Enhanced RAG System server running on port ${APP_CONFIG.PORT}`,
+			);
 			logger.info(
 				`🚀 Enhanced RAG System server running on port ${APP_CONFIG.PORT}`,
 			);
@@ -77,13 +94,14 @@ const startServer = async () => {
 		(global as any).database = database;
 		(global as any).io = io;
 	} catch (error) {
+		console.error("❌ Failed to start server:", error);
 		const fallbackLogger = logger || console;
 		fallbackLogger.error("❌ Failed to start server:", error);
 		process.exit(1);
 	}
 };
 
-const setupWebSocketHandlers = (io: SocketIOServer, logger: any) => {
+const setupWebSocketHandlers = (io: SocketIOServer, logger: Logger) => {
 	io.on("connection", (socket) => {
 		logger.info(`Client connected: ${socket.id}`);
 
@@ -112,7 +130,11 @@ const setupWebSocketHandlers = (io: SocketIOServer, logger: any) => {
 	});
 };
 
-const setupGracefulShutdown = (server: any, database: any, logger: any) => {
+const setupGracefulShutdown = (
+	server: Server,
+	database: MongoClient,
+	logger: Logger,
+) => {
 	const shutdown = async (signal: string) => {
 		logger.info(`${signal} received, shutting down gracefully`);
 
