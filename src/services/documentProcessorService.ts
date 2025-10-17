@@ -1,5 +1,6 @@
 import path from "node:path";
-import pdf from "pdf-parse";
+import { PDFParse } from "pdf-parse";
+import type { RedisClientType } from "redis";
 import sharp from "sharp";
 import Tesseract from "tesseract.js";
 import { logger } from "../config/logger.js";
@@ -13,7 +14,7 @@ const processDocument = async (
 	fileBuffer: Buffer,
 	originalName: string,
 	mimeType: string,
-	redisClient?: any,
+	redisClient?: RedisClientType,
 ): Promise<ProcessedDocument> => {
 	try {
 		const fileExtension = path.extname(originalName).toLowerCase();
@@ -45,11 +46,11 @@ const processDocument = async (
 const processPDF = async (
 	fileBuffer: Buffer,
 	fileSize: number,
-	redisClient?: any,
+	redisClient?: RedisClientType,
 ): Promise<ProcessedDocument> => {
 	try {
 		// Extract text from PDF
-		const pdfData = await pdf(fileBuffer);
+		const pdfData = await new PDFParse({ data: fileBuffer }).getText();
 
 		// Generate text embedding
 		const embedding = await embeddingService.generateTextEmbedding(
@@ -74,7 +75,7 @@ const processPDF = async (
 			content: pdfData.text,
 			fileSize,
 			metadata: {
-				pageCount: pdfData.numpages,
+				pageCount: pdfData.total,
 				language,
 				author: extractAuthor(pdfData.text),
 				keywords: extractKeywords(pdfData.text),
@@ -91,7 +92,7 @@ const processPDF = async (
 const processTextFile = async (
 	fileBuffer: Buffer,
 	fileSize: number,
-	redisClient?: any,
+	redisClient?: RedisClientType,
 ): Promise<ProcessedDocument> => {
 	try {
 		const content = fileBuffer.toString("utf-8");
@@ -125,7 +126,7 @@ const processTextFile = async (
 const processImageFile = async (
 	fileBuffer: Buffer,
 	fileSize: number,
-	redisClient?: any,
+	redisClient?: RedisClientType,
 ): Promise<ProcessedDocument> => {
 	try {
 		const image = await processImage(fileBuffer, redisClient);
@@ -149,7 +150,7 @@ const processImageFile = async (
 
 const processImage = async (
 	imageBuffer: Buffer,
-	redisClient?: any,
+	redisClient?: RedisClientType,
 ): Promise<ProcessedImage> => {
 	try {
 		// Get image metadata
