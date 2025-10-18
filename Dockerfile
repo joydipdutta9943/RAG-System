@@ -18,11 +18,6 @@ RUN bun install
 # Copy application code
 COPY . .
 
-# Fix pdf-parse library debug mode issue (must be after files are copied)
-RUN if [ -f node_modules/pdf-parse/index.js ]; then \
-    sed -i 's/let isDebugMode = !module.parent;/let isDebugMode = false;/g' node_modules/pdf-parse/index.js; \
-    fi
-
 # Generate Prisma client
 RUN bunx prisma generate
 
