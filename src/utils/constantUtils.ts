@@ -79,8 +79,8 @@ export const COOKIE_CONFIG = {
 	HTTP_ONLY: true,
 	// Secure only in production HTTPS environments, with explicit flag
 	SECURE: process.env.FORCE_SECURE_COOKIES === "true",
-	// SameSite: lax for better compatibility with HTTP
-	SAME_SITE: "lax" as const,
+	// SameSite: none for cross-origin requests with lax fallback
+	SAME_SITE: process.env.ALLOW_CROSS_ORIGIN === "true" ? ("none" as const) : ("lax" as const),
 	PATH: "/",
 	DOMAIN: process.env.COOKIE_DOMAIN || undefined,
 } as const;

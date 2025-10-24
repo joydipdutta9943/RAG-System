@@ -35,6 +35,9 @@ const initializeExpress = (): Express => {
 					"http://localhost:3000",
 					"https://localhost:3001",
 					"https://localhost:3000",
+					// Add your EC2 backend URL for testing
+					"http://ec2-50-19-166-175.compute-1.amazonaws.com",
+					"https://ec2-50-19-166-175.compute-1.amazonaws.com",
 				].filter(Boolean);
 
 				// Allow requests with no origin (mobile apps, curl, etc.)
