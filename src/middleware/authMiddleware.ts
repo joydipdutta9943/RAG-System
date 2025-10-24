@@ -7,17 +7,16 @@ import type {
 } from "../types/authTypes.js";
 import { errorUtils } from "../utils/index.js";
 
-const authenticateToken = (
+const authenticateCookie = (
 	req: AuthenticatedRequest,
 	_res: Response,
 	next: NextFunction,
 ): void => {
 	try {
-		const authHeader = req.headers.authorization;
-		const token = authHeader?.split(" ")[1]; // Bearer TOKEN
+		const token = req.cookies?.token;
 
 		if (!token) {
-			throw errorUtils.createAuthenticationError("Access token required");
+			throw errorUtils.createAuthenticationError("Authentication required");
 		}
 
 		const decoded = userService.verifyToken(token);
@@ -88,8 +87,7 @@ const optionalAuth = (
 	next: NextFunction,
 ): void => {
 	try {
-		const authHeader = req.headers.authorization;
-		const token = authHeader?.split(" ")[1]; // Bearer TOKEN
+		const token = req.cookies?.token;
 
 		if (token) {
 			try {
@@ -101,7 +99,9 @@ const optionalAuth = (
 				};
 			} catch (_error) {
 				// Token is invalid, but we continue without authentication
-				logger.debug("Invalid optional auth token, continuing unauthenticated");
+				logger.debug(
+					"Invalid optional auth cookie, continuing unauthenticated",
+				);
 			}
 		}
 
@@ -139,8 +139,8 @@ const createAuthMiddleware = (options: AuthMiddlewareOptions = {}) => {
 				return;
 			}
 
-			// Standard token authentication
-			authenticateToken(req, res, (err) => {
+			// Standard cookie authentication
+			authenticateCookie(req, res, (err) => {
 				if (err) {
 					next(err);
 					return;
@@ -177,7 +177,7 @@ const apiKeyAuth = createAuthMiddleware({
 });
 
 const authMiddleware = {
-	authenticateToken,
+	authenticateCookie,
 	authorizeRoles,
 	validateApiKey,
 	optionalAuth,

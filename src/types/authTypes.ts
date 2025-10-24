@@ -31,7 +31,6 @@ export interface RegisterRequest {
 }
 
 export interface AuthResponse {
-	token: string;
 	user: {
 		id: string;
 		email: string;
@@ -55,7 +54,7 @@ export interface PasswordUpdateRequest {
 }
 
 export interface ChangePasswordRequest {
-	token: string;
+	currentPassword: string;
 	newPassword: string;
 	confirmPassword: string;
 }

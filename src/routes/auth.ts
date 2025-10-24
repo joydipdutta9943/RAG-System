@@ -1,6 +1,7 @@
 import express from "express";
 import { body } from "express-validator";
 import { authController } from "../controllers/index.js";
+import authMiddleware from "../middleware/authMiddleware.js";
 import { rateLimitMiddleware } from "../middleware/index.js";
 
 const router = express.Router();
@@ -34,7 +35,14 @@ router.post(
 	authController.loginHandler,
 );
 
-// Get current user profile
-router.get("/profile", authController.getProfileHandler);
+// Get current user profile (protected)
+router.get(
+	"/profile",
+	authMiddleware.requireAuth,
+	authController.getProfileHandler,
+);
+
+// Logout
+router.post("/logout", authController.logoutHandler);
 
 export default router;

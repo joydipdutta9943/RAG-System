@@ -1,4 +1,5 @@
 import compression from "compression";
+import cookieParser from "cookie-parser";
 import cors from "cors";
 import express, { type Express } from "express";
 import helmet from "helmet";
@@ -35,6 +36,7 @@ const initializeExpress = (): Express => {
 
 	// General middleware
 	app.use(compression());
+	app.use(cookieParser());
 	app.use(express.json({ limit: "10mb" }));
 	app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 

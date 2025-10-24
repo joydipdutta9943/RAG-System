@@ -8,7 +8,7 @@ import uploadMiddleware from "../middleware/upload.js";
 const router = express.Router();
 
 // Apply authentication to all routes
-router.use(authMiddleware.authenticateToken);
+router.use(authMiddleware.requireAuth);
 
 // Upload single document
 router.post(

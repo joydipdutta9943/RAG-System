@@ -11,7 +11,7 @@ const router = express.Router();
 aiAgentLangchainService.initialize();
 
 // Apply authentication to all routes
-router.use(authMiddleware.authenticateToken);
+router.use(authMiddleware.requireAuth);
 
 // Text search
 router.post(

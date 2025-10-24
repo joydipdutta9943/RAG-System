@@ -72,6 +72,17 @@ export const SECURITY_CONFIG = {
 	SESSION_TIMEOUT: 24 * 60 * 60 * 1000, // 24 hours
 } as const;
 
+// Cookie constants
+export const COOKIE_CONFIG = {
+	NAME: "token",
+	MAX_AGE: 7 * 24 * 60 * 60 * 1000, // 7 days
+	HTTP_ONLY: true,
+	SECURE: process.env.NODE_ENV === "production",
+	SAME_SITE: "lax" as const,
+	PATH: "/",
+	DOMAIN: process.env.COOKIE_DOMAIN,
+} as const;
+
 // WebSocket constants
 export const WEBSOCKET_CONFIG = {
 	HEARTBEAT_INTERVAL: 30000, // 30 seconds
@@ -88,6 +99,7 @@ const constantUtils = {
 	RATE_LIMIT_CONFIG,
 	AI_CONFIG,
 	SECURITY_CONFIG,
+	COOKIE_CONFIG,
 	WEBSOCKET_CONFIG,
 };
 

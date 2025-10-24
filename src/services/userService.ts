@@ -246,10 +246,10 @@ const getAllUsers = async (
 	}
 };
 
-const loginUser = async (
+const authenticateUser = async (
 	credentials: LoginCredentials,
 	collection: Collection,
-): Promise<{ user: UserResponse; token: string }> => {
+): Promise<UserResponse> => {
 	try {
 		// Validate input
 		const validation = validatorUtils.validateLogin(credentials);
@@ -282,13 +282,6 @@ const loginUser = async (
 			throw errorUtils.createAuthenticationError("Invalid email or password");
 		}
 
-		// Generate JWT token
-		const token = generateToken({
-			id: user.id,
-			email: user.email,
-			role: user.role,
-		});
-
 		const userResponse: UserResponse = {
 			id: user.id,
 			name: user.name,
@@ -299,20 +292,20 @@ const loginUser = async (
 			updatedAt: user.updatedAt,
 		};
 
-		logger.info(`User logged in successfully: ${user.email}`);
-		return { user: userResponse, token };
+		logger.info(`User authenticated successfully: ${user.email}`);
+		return userResponse;
 	} catch (error) {
-		logger.error("Error during login:", error);
+		logger.error("Error during authentication:", error);
 		throw errorUtils.isOperationalError(error)
 			? error
-			: errorUtils.createError("Login failed");
+			: errorUtils.createError("Authentication failed");
 	}
 };
 
 const registerUser = async (
 	registerData: RegisterData,
 	collection: Collection,
-): Promise<{ user: UserResponse; token: string }> => {
+): Promise<UserResponse> => {
 	try {
 		// Validate input
 		const validation = validatorUtils.validateRegister(registerData);
@@ -338,15 +331,8 @@ const registerUser = async (
 		// Create user
 		const user = await createUser(userData, collection);
 
-		// Generate token
-		const token = generateToken({
-			id: user.id,
-			email: user.email,
-			role: user.role,
-		});
-
 		logger.info(`User registered successfully: ${user.email}`);
-		return { user, token };
+		return user;
 	} catch (error) {
 		logger.error("Error during registration:", error);
 		throw errorUtils.isOperationalError(error)
@@ -449,7 +435,7 @@ const userService = {
 	updateUser,
 	deleteUser,
 	getAllUsers,
-	loginUser,
+	authenticateUser,
 	registerUser,
 	generateToken,
 	verifyToken,
