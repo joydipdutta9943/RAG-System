@@ -27,7 +27,29 @@ const initializeExpress = (): Express => {
 	// CORS configuration
 	app.use(
 		cors({
-			origin: process.env.FRONTEND_URL || "http://localhost:3001",
+			origin: (origin, callback) => {
+				// List of allowed origins
+				const allowedOrigins = [
+					process.env.FRONTEND_URL,
+					"http://localhost:3001",
+					"http://localhost:3000",
+					"https://localhost:3001",
+					"https://localhost:3000",
+				].filter(Boolean);
+
+				// Allow requests with no origin (mobile apps, curl, etc.)
+				if (!origin) {
+					return callback(null, true);
+				}
+
+				// Check if origin is in allowed list
+				if (allowedOrigins.includes(origin)) {
+					callback(null, true);
+				} else {
+					logger.warn(`CORS blocked origin: ${origin}`);
+					callback(new Error("Not allowed by CORS"));
+				}
+			},
 			credentials: true,
 			methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
 			allowedHeaders: ["Content-Type", "Authorization"],

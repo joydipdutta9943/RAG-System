@@ -77,10 +77,12 @@ export const COOKIE_CONFIG = {
 	NAME: "token",
 	MAX_AGE: 7 * 24 * 60 * 60 * 1000, // 7 days
 	HTTP_ONLY: true,
-	SECURE: process.env.NODE_ENV === "production",
+	// Secure only in production HTTPS environments, with explicit flag
+	SECURE: process.env.FORCE_SECURE_COOKIES === "true",
+	// SameSite: lax for better compatibility with HTTP
 	SAME_SITE: "lax" as const,
 	PATH: "/",
-	DOMAIN: process.env.COOKIE_DOMAIN,
+	DOMAIN: process.env.COOKIE_DOMAIN || undefined,
 } as const;
 
 // WebSocket constants
