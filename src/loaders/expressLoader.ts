@@ -28,19 +28,25 @@ const initializeExpress = (): Express => {
 	app.use(
 		cors({
 			origin: (origin, callback) => {
-				// List of allowed origins
+				// In development/staging, be more permissive
+				if (process.env.NODE_ENV !== "production") {
+					// Allow any origin in development
+					return callback(null, true);
+				}
+
+				// Production: List of allowed origins
 				const allowedOrigins = [
 					process.env.FRONTEND_URL,
 					"http://localhost:3001",
 					"http://localhost:3000",
 					"https://localhost:3001",
 					"https://localhost:3000",
-					// Add your EC2 backend URL for testing
+					// Add specific production domains
 					"http://ec2-50-19-166-175.compute-1.amazonaws.com",
 					"https://ec2-50-19-166-175.compute-1.amazonaws.com",
 				].filter(Boolean);
 
-				// Allow requests with no origin (mobile apps, curl, etc.)
+				// Allow requests with no origin (mobile apps, curl, Postman, etc.)
 				if (!origin) {
 					return callback(null, true);
 				}

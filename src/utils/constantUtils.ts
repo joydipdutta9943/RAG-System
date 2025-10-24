@@ -77,11 +77,12 @@ export const COOKIE_CONFIG = {
 	NAME: "token",
 	MAX_AGE: 7 * 24 * 60 * 60 * 1000, // 7 days
 	HTTP_ONLY: true,
-	// Secure only in production HTTPS environments, with explicit flag
+	// Secure only when explicitly forced (for HTTPS)
 	SECURE: process.env.FORCE_SECURE_COOKIES === "true",
-	// SameSite: none for cross-origin requests with lax fallback
-	SAME_SITE: process.env.ALLOW_CROSS_ORIGIN === "true" ? ("none" as const) : ("lax" as const),
+	// Use lax for HTTP compatibility (none requires secure)
+	SAME_SITE: "lax" as const,
 	PATH: "/",
+	// Only set domain if explicitly configured to avoid cross-domain issues
 	DOMAIN: process.env.COOKIE_DOMAIN || undefined,
 } as const;
 
