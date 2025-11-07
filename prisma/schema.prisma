@@ -39,6 +39,16 @@ model Document {
   topics      String[]
   sentiment   Float?
   language    String?
+
+  // Phase 1: Enhanced AI features
+  category    String?        // Auto-categorized document type
+  categories  String[]       // Multiple categories
+  keyPoints   String[]       // Extracted key points
+  summaries   Json?          // Multiple summary levels (one-sentence, paragraph, executive, chapters)
+  extractedEntities Json?    // Structured entity data with types
+  readabilityScore Float?    // Document readability score
+  qualityScore Float?        // AI-assessed quality score
+
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -57,6 +67,16 @@ model Image {
   ocrText     String?
   embedding   Float[]
   metadata    Json?
+
+  // Phase 1: Gemini Vision features
+  visualAnalysis Json?      // Gemini Vision analysis results
+  extractedData  Json?      // Structured data from charts/tables
+  detectedObjects String[]  // Objects detected in image
+  imageCategory  String?    // Category of image (chart, diagram, photo, etc.)
+  hasText        Boolean    @default(false)
+  hasChart       Boolean    @default(false)
+  hasDiagram     Boolean    @default(false)
+
   createdAt   DateTime @default(now())
 
   // Relations

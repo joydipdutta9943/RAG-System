@@ -1,11 +1,15 @@
+import aiFeaturesController from "./aiFeaturesController.js";
 import authController from "./authController.js";
 import documentController from "./documentController.js";
 import healthController from "./healthController.js";
 import searchController from "./searchController.js";
+import visionController from "./visionController.js";
 
 export {
-	documentController,
+	aiFeaturesController,
 	authController,
-	searchController,
+	documentController,
 	healthController,
+	searchController,
+	visionController,
 };

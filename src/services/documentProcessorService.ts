@@ -8,7 +8,10 @@ import type {
 	ProcessedDocument,
 	ProcessedImage,
 } from "../types/documentTypes.js";
+import documentCategorizationService from "./documentCategorizationService.js";
 import embeddingService from "./embeddingService.js";
+import geminiVisionService from "./geminiVisionService.js";
+import summarizationService from "./summarizationService.js";
 
 const processDocument = async (
 	fileBuffer: Buffer,
@@ -58,16 +61,16 @@ const processPDF = async (
 			redisClient,
 		);
 
-		// Detect language (basic implementation)
-		const language = detectLanguage(pdfData.text);
+		// Detect language with AI
+		const language = await detectLanguage(pdfData.text);
 
-		// Extract entities
+		// Extract entities with AI
 		const _entities = await extractEntities(pdfData.text);
 
-		// Generate summary
+		// Generate summary with AI
 		const _summary = await generateSummary(pdfData.text);
 
-		// Analyze sentiment
+		// Analyze sentiment with AI
 		const _sentiment = await analyzeSentiment(pdfData.text);
 
 		return {
@@ -100,7 +103,7 @@ const processTextFile = async (
 			content,
 			redisClient,
 		);
-		const language = detectLanguage(content);
+		const language = await detectLanguage(content);
 		const _entities = await extractEntities(content);
 		const _summary = await generateSummary(content);
 		const _sentiment = await analyzeSentiment(content);
@@ -194,131 +197,175 @@ const processImage = async (
 const generateImageDescription = async (
 	imageBuffer: Buffer,
 ): Promise<string> => {
-	// Placeholder for AI-powered image description
-	// In a real implementation, this would use a vision model
 	try {
-		const metadata = await sharp(imageBuffer).metadata();
-		return `Image with dimensions ${metadata.width}x${metadata.height} in ${metadata.format} format`;
+		// Use Gemini Vision for AI-powered image description
+		const analysis = await geminiVisionService.analyzeImage(imageBuffer);
+		return analysis.description || "Image description unavailable";
 	} catch (error) {
-		logger.error("Error generating image description:", error);
-		return "Image description unavailable";
+		logger.warn("Gemini Vision unavailable, using fallback description:", error);
+		try {
+			const metadata = await sharp(imageBuffer).metadata();
+			return `Image with dimensions ${metadata.width}x${metadata.height} in ${metadata.format} format`;
+		} catch (metadataError) {
+			logger.error("Error generating image description:", metadataError);
+			return "Image description unavailable";
+		}
 	}
 };
 
-const detectLanguage = (text: string): string => {
-	// Basic language detection (placeholder)
-	// In a real implementation, use a proper language detection library
-	const commonEnglishWords = [
-		"the",
-		"and",
-		"or",
-		"but",
-		"in",
-		"on",
-		"at",
-		"to",
-		"for",
-		"of",
-		"with",
-		"by",
-	];
-	const words = text.toLowerCase().split(/\s+/).slice(0, 100);
-	const englishWordCount = words.filter((word) =>
-		commonEnglishWords.includes(word),
-	).length;
+const detectLanguage = async (text: string): Promise<string> => {
+	try {
+		// Use AI for accurate language detection
+		return await documentCategorizationService.detectDocumentLanguage(text);
+	} catch (error) {
+		logger.warn("AI language detection unavailable, using fallback:", error);
+		// Fallback to basic detection
+		const commonEnglishWords = [
+			"the",
+			"and",
+			"or",
+			"but",
+			"in",
+			"on",
+			"at",
+			"to",
+			"for",
+			"of",
+			"with",
+			"by",
+		];
+		const words = text.toLowerCase().split(/\s+/).slice(0, 100);
+		const englishWordCount = words.filter((word) =>
+			commonEnglishWords.includes(word),
+		).length;
 
-	return englishWordCount > words.length * 0.1 ? "en" : "unknown";
+		return englishWordCount > words.length * 0.1 ? "en" : "unknown";
+	}
 };
 
 const extractEntities = async (text: string): Promise<string[]> => {
-	// Placeholder for named entity recognition
-	// In a real implementation, use NLP libraries like spaCy or transformers
-	const entities: string[] = [];
+	try {
+		// Use AI for advanced entity extraction
+		const extractedEntities =
+			await documentCategorizationService.extractEntities(text);
 
-	// Simple regex patterns for common entities
-	const emailPattern = /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/g;
-	const phonePattern = /\b\d{3}[-.]?\d{3}[-.]?\d{4}\b/g;
-	const urlPattern = /https?:\/\/[^\s]+/g;
+		// Combine all entity types
+		const entities: string[] = [
+			...(extractedEntities.people || []),
+			...(extractedEntities.organizations || []),
+			...(extractedEntities.locations || []),
+			...(extractedEntities.emails || []),
+			...(extractedEntities.phoneNumbers || []),
+			...(extractedEntities.urls || []),
+		];
 
-	const emails = text.match(emailPattern) || [];
-	const phones = text.match(phonePattern) || [];
-	const urls = text.match(urlPattern) || [];
+		return [...new Set(entities)]; // Remove duplicates
+	} catch (error) {
+		logger.warn("AI entity extraction unavailable, using fallback:", error);
+		// Fallback to regex patterns
+		const entities: string[] = [];
+		const emailPattern =
+			/\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/g;
+		const phonePattern = /\b\d{3}[-.]?\d{3}[-.]?\d{4}\b/g;
+		const urlPattern = /https?:\/\/[^\s]+/g;
 
-	entities.push(...emails, ...phones, ...urls);
+		const emails = text.match(emailPattern) || [];
+		const phones = text.match(phonePattern) || [];
+		const urls = text.match(urlPattern) || [];
 
-	return [...new Set(entities)]; // Remove duplicates
+		entities.push(...emails, ...phones, ...urls);
+		return [...new Set(entities)];
+	}
 };
 
 const generateSummary = async (
 	text: string,
 	maxLength: number = 200,
 ): Promise<string> => {
-	// Simple extractive summarization
-	const sentences = text.split(/[.!?]+/).filter((s) => s.trim().length > 10);
+	try {
+		// Use AI for high-quality summarization
+		const summary =
+			await summarizationService.generateParagraphSummary(text);
 
-	if (sentences.length <= 3) {
-		return text.substring(0, maxLength);
-	}
+		// Trim to maxLength if needed
+		return summary.length > maxLength
+			? `${summary.substring(0, maxLength)}...`
+			: summary;
+	} catch (error) {
+		logger.warn("AI summarization unavailable, using fallback:", error);
+		// Fallback to simple extractive summarization
+		const sentences = text.split(/[.!?]+/).filter((s) => s.trim().length > 10);
 
-	// Score sentences by word frequency
-	const words = text.toLowerCase().match(/\b\w+\b/g) || [];
-	const wordFreq: Record<string, number> = {};
+		if (sentences.length <= 3) {
+			return text.substring(0, maxLength);
+		}
 
-	words.forEach((word) => {
-		wordFreq[word] = (wordFreq[word] || 0) + 1;
-	});
+		// Score sentences by word frequency
+		const words = text.toLowerCase().match(/\b\w+\b/g) || [];
+		const wordFreq: Record<string, number> = {};
 
-	const sentenceScores = sentences.map((sentence) => {
-		const sentenceWords = sentence.toLowerCase().match(/\b\w+\b/g) || [];
-		let score = 0;
-		sentenceWords.forEach((word) => {
-			score += wordFreq[word] || 0;
+		words.forEach((word) => {
+			wordFreq[word] = (wordFreq[word] || 0) + 1;
 		});
-		return { sentence: sentence.trim(), score };
-	});
 
-	// Get top sentences
-	sentenceScores.sort((a, b) => b.score - a.score);
-	const topSentences = sentenceScores.slice(0, 3).map((s) => s.sentence);
+		const sentenceScores = sentences.map((sentence) => {
+			const sentenceWords = sentence.toLowerCase().match(/\b\w+\b/g) || [];
+			let score = 0;
+			sentenceWords.forEach((word) => {
+				score += wordFreq[word] || 0;
+			});
+			return { sentence: sentence.trim(), score };
+		});
 
-	const summary = `${topSentences.join(". ")}.`;
-	return summary.length > maxLength
-		? `${summary.substring(0, maxLength)}...`
-		: summary;
+		// Get top sentences
+		sentenceScores.sort((a, b) => b.score - a.score);
+		const topSentences = sentenceScores.slice(0, 3).map((s) => s.sentence);
+
+		const summary = `${topSentences.join(". ")}.`;
+		return summary.length > maxLength
+			? `${summary.substring(0, maxLength)}...`
+			: summary;
+	}
 };
 
 const analyzeSentiment = async (text: string): Promise<number> => {
-	// Simple sentiment analysis (-1 to 1)
-	const positiveWords = [
-		"good",
-		"great",
-		"excellent",
-		"amazing",
-		"wonderful",
-		"fantastic",
-		"positive",
-		"success",
-	];
-	const negativeWords = [
-		"bad",
-		"terrible",
-		"awful",
-		"horrible",
-		"negative",
-		"failure",
-		"problem",
-		"issue",
-	];
+	try {
+		// Use AI for accurate sentiment analysis
+		return await documentCategorizationService.analyzeSentiment(text);
+	} catch (error) {
+		logger.warn("AI sentiment analysis unavailable, using fallback:", error);
+		// Fallback to simple keyword-based sentiment analysis
+		const positiveWords = [
+			"good",
+			"great",
+			"excellent",
+			"amazing",
+			"wonderful",
+			"fantastic",
+			"positive",
+			"success",
+		];
+		const negativeWords = [
+			"bad",
+			"terrible",
+			"awful",
+			"horrible",
+			"negative",
+			"failure",
+			"problem",
+			"issue",
+		];
 
-	const words = text.toLowerCase().match(/\b\w+\b/g) || [];
-	let score = 0;
+		const words = text.toLowerCase().match(/\b\w+\b/g) || [];
+		let score = 0;
 
-	words.forEach((word) => {
-		if (positiveWords.includes(word)) score += 1;
-		if (negativeWords.includes(word)) score -= 1;
-	});
+		words.forEach((word) => {
+			if (positiveWords.includes(word)) score += 1;
+			if (negativeWords.includes(word)) score -= 1;
+		});
 
-	return Math.max(-1, Math.min(1, (score / words.length) * 10));
+		return Math.max(-1, Math.min(1, (score / words.length) * 10));
+	}
 };
 
 const extractAuthor = (text: string): string | undefined => {

@@ -6,10 +6,12 @@ import { logger } from "./config/logger.js";
 import loaderService from "./loaders/index.js";
 import errorHandlerMiddleware from "./middleware/errorHandlerMiddleware.js";
 // Import routes
+import aiFeaturesRoutes from "./routes/aiFeatures.js";
 import authRoutes from "./routes/auth.js";
 import documentRoutes from "./routes/documents.js";
 import healthRoutes from "./routes/healthRoutes.js";
 import searchRoutes from "./routes/search.js";
+import visionRoutes from "./routes/vision.js";
 // Import services
 import {
 	aiAgentLangchainService,
@@ -44,6 +46,8 @@ const startServer = async () => {
 		express.use("/api/auth", authRoutes);
 		express.use("/api/documents", documentRoutes);
 		express.use("/api/search", searchRoutes);
+		express.use("/api/vision", visionRoutes);
+		express.use("/api/ai", aiFeaturesRoutes);
 		express.use("/health", healthRoutes.setupHealthRoutes());
 
 		console.log("🛣️  Routes registered");
