@@ -1,5 +1,4 @@
-import type { Document } from "mongodb";
-import { type Collection, ObjectId } from "mongodb";
+import { type Collection, type Document, ObjectId } from "mongodb";
 
 interface FindByIdOptions {
 	projection?: Record<string, number>;
