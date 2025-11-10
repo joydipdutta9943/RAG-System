@@ -68,5 +68,5 @@ jobs:
         run: |
           echo "🔍 Verifying deployment..."
           sleep 5
-          curl -f http://${{ secrets.VM_HOST }}/health || exit 1
+          curl -f http://${{ secrets.HOST_DOMAIN }}/health || exit 1
           echo "✅ Application is responding!"
