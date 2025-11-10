@@ -190,6 +190,11 @@ const vectorSearch = async (
 					score: { $meta: "vectorSearchScore" },
 				},
 			},
+			{
+				$match: {
+					score: { $gte: filter.scoreThreshold || 0.7 }, // Set your desired score threshold here
+				},
+			},
 		];
 
 		// Execute search with timeout and fallback
@@ -245,7 +250,9 @@ const vectorSearch = async (
 		// Cache results for a short time
 		if (redisClient) {
 			try {
-				const cacheKey = `vector_search:${Buffer.from(query + JSON.stringify(options)).toString("base64")}`;
+				const cacheKey = `vector_search:${Buffer.from(
+					query + JSON.stringify(options),
+				).toString("base64")}`;
 				await redisClient.setEx(
 					cacheKey,
 					REDIS_CONFIG.SEARCH_CACHE_TTL,

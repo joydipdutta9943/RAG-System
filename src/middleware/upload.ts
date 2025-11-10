@@ -78,13 +78,18 @@ const createUploadMiddleware = (options: {
 	}
 };
 
-// Error handling middleware for multer
+// Error handling middleware for multer - Express error handler signature
 const handleUploadError = (
 	error: any,
 	_req: Request,
 	res: Response,
-	_next: NextFunction,
+	next: NextFunction,
 ) => {
+	// If there's no error, pass to next middleware
+	if (!error) {
+		return next();
+	}
+
 	if (error instanceof multer.MulterError) {
 		switch (error.code) {
 			case "LIMIT_FILE_SIZE":
@@ -110,7 +115,7 @@ const handleUploadError = (
 		}
 	}
 
-	if (error.message.includes("Unsupported file type")) {
+	if (error?.message?.includes("Unsupported file type")) {
 		return res.status(400).json({
 			error: "Unsupported file type",
 			message: error.message,
@@ -124,12 +129,31 @@ const handleUploadError = (
 	});
 };
 
-// Create specific upload middlewares
-const uploadSingle = createUploadMiddleware({ maxFiles: 1, fieldName: "file" });
-const uploadMultiple = createUploadMiddleware({
+// Wrapper to catch multer errors and forward to error handler
+const wrapUploadMiddleware = (uploadMiddleware: any) => {
+	return (req: Request, res: Response, next: NextFunction) => {
+		uploadMiddleware(req, res, (error: any) => {
+			if (error) {
+				return handleUploadError(error, req, res, next);
+			}
+			next();
+		});
+	};
+};
+
+// Create specific upload middlewares with error handling
+const uploadSingleRaw = createUploadMiddleware({
+	maxFiles: 1,
+	fieldName: "file",
+});
+const uploadMultipleRaw = createUploadMiddleware({
 	maxFiles: 10,
 	fieldName: "files",
 });
+
+// Wrap upload middlewares to properly handle errors
+const uploadSingle = wrapUploadMiddleware(uploadSingleRaw);
+const uploadMultiple = wrapUploadMiddleware(uploadMultipleRaw);
 
 const uploadMiddleware = {
 	uploadSingle,

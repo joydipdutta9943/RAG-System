@@ -1,4 +1,3 @@
-import { HumanMessage, SystemMessage } from "@langchain/core/messages";
 import { StringOutputParser } from "@langchain/core/output_parsers";
 import { PromptTemplate } from "@langchain/core/prompts";
 import { ChatGoogleGenerativeAI } from "@langchain/google-genai";
@@ -230,10 +229,19 @@ const processQuery = async (
 		logger.info(`Query complexity assessment:`, complexity);
 		logger.info(`Using model: ${modelName}`);
 
-		// Create prompt template
-		const promptTemplate = PromptTemplate.fromTemplate(
-			"You are a helpful AI assistant. Based on the provided context, answer the user's question accurately.\n\nContext:\n{context}\n\nQuestion: {question}\n\nAnswer:",
-		);
+		// Create appropriate prompt template based on whether context is available
+		let promptTemplate: PromptTemplate;
+		if (context.length === 0) {
+			// No context available - general knowledge prompt
+			promptTemplate = PromptTemplate.fromTemplate(
+				"You are a helpful AI assistant. Answer the user's question to the best of your ability using your general knowledge.\n\nQuestion: {question}\n\nAnswer:",
+			);
+		} else {
+			// Context available - context-based prompt
+			promptTemplate = PromptTemplate.fromTemplate(
+				"You are a helpful AI assistant. Based on the provided context, answer the user's question accurately.\n\nContext:\n{context}\n\nQuestion: {question}\n\nAnswer:",
+			);
+		}
 
 		// Create chain
 		const chain = promptTemplate
@@ -241,11 +249,20 @@ const processQuery = async (
 			.pipe(new StringOutputParser());
 
 		// Generate response
-		const contextStr = context.join("\n\n---\n\n");
-		const response = await chain.invoke({
-			context: contextStr,
-			question: query,
-		});
+		let response: string;
+		if (context.length === 0) {
+			// No context - don't pass context parameter
+			response = await chain.invoke({
+				question: query,
+			});
+		} else {
+			// Context available - pass context parameter
+			const contextStr = context.join("\n\n---\n\n");
+			response = await chain.invoke({
+				context: contextStr,
+				question: query,
+			});
+		}
 
 		const processingTime = Date.now() - startTime;
 

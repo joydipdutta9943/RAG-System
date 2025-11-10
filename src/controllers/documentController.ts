@@ -37,6 +37,7 @@ const uploadDocumentHandler = async (
 		const entities = await documentProcessorService.extractEntities(
 			processedDoc.content,
 		);
+		const topics = documentProcessorService.extractTopics(processedDoc.content);
 		const summary = await documentProcessorService.generateSummary(
 			processedDoc.content,
 		);
@@ -63,6 +64,7 @@ const uploadDocumentHandler = async (
 				metadata: metadataJson,
 				summary,
 				entities,
+				topics,
 				sentiment,
 				language: processedDoc.metadata.language,
 				userId,
@@ -135,6 +137,9 @@ const batchUploadHandler = async (
 				const entities = await documentProcessorService.extractEntities(
 					processedDoc.content,
 				);
+				const topics = documentProcessorService.extractTopics(
+					processedDoc.content,
+				);
 				const summary = await documentProcessorService.generateSummary(
 					processedDoc.content,
 				);
@@ -154,6 +159,7 @@ const batchUploadHandler = async (
 						metadata: metadataJson,
 						summary,
 						entities,
+						topics,
 						sentiment,
 						language: processedDoc.metadata.language,
 						userId,

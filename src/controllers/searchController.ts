@@ -5,6 +5,7 @@ import { prisma } from "../config/database.js";
 import { logger } from "../config/logger.js";
 import {
 	aiAgentLangchainService,
+	documentProcessorService,
 	vectorSearchService,
 } from "../services/index.js";
 import type { AuthenticatedRequest } from "../types/authTypes.js";
@@ -47,10 +48,12 @@ const textSearchHandler = async (
 
 		logger.info(`Text search query: "${query}" by user: ${userId}`);
 
-		const vectorFilter: SearchFilter = { userId };
+		const vectorFilter: SearchFilter = { userId, scoreThreshold: 0.8 };
 		if (filters.documentType && filters.documentType.length > 0) {
 			vectorFilter.fileType = filters.documentType;
 		}
+
+		// Perform vector search
 
 		let vectorResults = await vectorSearchService.vectorSearch(query, {
 			limit: Math.min(limit * 2, 50),
@@ -112,6 +115,50 @@ const textSearchHandler = async (
 				take: limit,
 				orderBy: { createdAt: "desc" },
 			});
+
+			// If no documents found in text search either, query AI without context
+			if (fallbackDocs.length === 0) {
+				logger.info(
+					"No documents found in text search, querying AI without document context",
+				);
+
+				const noContextAiResponse = await aiAgentLangchainService.processQuery(
+					query,
+					[], // Empty context array
+				);
+
+				const savedQuery = await prisma.query.create({
+					data: {
+						query,
+						queryType: "TEXT",
+						response: noContextAiResponse.response,
+						sources: [],
+						confidence: noContextAiResponse.confidence,
+						processingTime: Date.now() - startTime,
+						modelUsed: noContextAiResponse.model,
+						metadata: {
+							filters: filters as Prisma.InputJsonValue,
+							resultCount: 0,
+							searchType: "no_context_ai",
+						},
+						userId,
+						documentIds: [],
+					},
+				});
+
+				return res.json({
+					query: savedQuery.query,
+					response: noContextAiResponse.response,
+					sources: [], // Empty sources array as no documents were found
+					metadata: {
+						processingTime: noContextAiResponse.processingTime,
+						model: noContextAiResponse.model,
+						confidence: noContextAiResponse.confidence,
+						totalResults: 0,
+						searchType: "no_context_ai",
+					},
+				});
+			}
 
 			// Prepare context for AI agent from fallback (full content)
 			const fallbackContext = fallbackDocs.map(
@@ -251,7 +298,41 @@ const imageSearchHandler = async (
 
 		logger.info(`Image search by user: ${userId}`);
 
-		// Find images from user's documents
+		// Process the uploaded image to extract information
+		const processedImage = await documentProcessorService.processImage(
+			req.file.buffer,
+		);
+
+		// Create a document record for the uploaded image
+		const imageDocument = await prisma.document.create({
+			data: {
+				title: `Image Search: ${req.file.originalname}`,
+				content: processedImage.ocrText || "",
+				fileType: req.file.mimetype,
+				fileSize: req.file.size,
+				embedding: processedImage.embedding,
+				metadata: JSON.parse(JSON.stringify(processedImage.metadata)),
+				summary: `Image uploaded for search: ${req.file.originalname}`,
+				entities: [],
+				topics: [],
+				sentiment: 0,
+				language: "unknown",
+				userId,
+				images: {
+					create: {
+						description: processedImage.description,
+						ocrText: processedImage.ocrText,
+						embedding: processedImage.embedding,
+						metadata: JSON.parse(JSON.stringify(processedImage.metadata)),
+					},
+				},
+			},
+			include: {
+				images: true,
+			},
+		});
+
+		// Find images from user's documents including the newly uploaded one
 		const images = await prisma.image.findMany({
 			where: {
 				document: { userId },
@@ -301,7 +382,10 @@ const imageSearchHandler = async (
 				confidence: aiResponse.confidence,
 				processingTime: Date.now() - startTime,
 				modelUsed: aiResponse.model,
-				metadata: { resultCount: imageResults.length },
+				metadata: {
+					resultCount: imageResults.length,
+					uploadedImageId: imageDocument.id,
+				},
 				userId,
 			},
 		});
@@ -321,6 +405,7 @@ const imageSearchHandler = async (
 				model: aiResponse.model,
 				confidence: aiResponse.confidence,
 				totalResults: imageResults.length,
+				uploadedImageId: imageDocument.id,
 			},
 		});
 	} catch (error) {

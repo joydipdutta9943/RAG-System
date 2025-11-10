@@ -15,7 +15,6 @@ router.post(
 	"/upload",
 	rateLimitMiddleware.uploadRateLimit,
 	uploadMiddleware.uploadSingle,
-	uploadMiddleware.handleUploadError,
 	documentController.uploadDocumentHandler,
 );
 
@@ -24,7 +23,6 @@ router.post(
 	"/batch-upload",
 	rateLimitMiddleware.uploadRateLimit,
 	uploadMiddleware.uploadMultiple,
-	uploadMiddleware.handleUploadError,
 	documentController.batchUploadHandler,
 );
 

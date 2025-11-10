@@ -5,8 +5,8 @@ import { VECTOR_CONFIG } from "../utils/constantUtils.js";
 
 // Initialize Google Generative AI
 const genAI = new GoogleGenerativeAI(process.env.GOOGLE_AI_API_KEY || "");
-// Use text-embedding-004 which produces 384-dimensional embeddings
-// This matches our existing vector index dimensions
+// Use text-embedding-004 which produces 768-dimensional embeddings by default
+// This matches our VECTOR_CONFIG.DEFAULT_DIMENSIONS setting
 const embeddingModel = genAI.getGenerativeModel({
 	model: "text-embedding-004",
 });
@@ -162,8 +162,9 @@ const generateImageEmbedding = async (
 };
 
 const generateSimpleImageEmbedding = (imageBuffer: Buffer): number[] => {
-	// Generate a simple 512-dimensional embedding based on image buffer characteristics
-	const dimensions = 512;
+	// Generate a simple embedding based on image buffer characteristics
+	// Using VECTOR_CONFIG.DEFAULT_DIMENSIONS to match text embeddings
+	const dimensions = VECTOR_CONFIG.DEFAULT_DIMENSIONS;
 	const embedding = new Array(dimensions).fill(0);
 
 	// Use buffer characteristics to generate pseudo-embedding

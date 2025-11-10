@@ -58,7 +58,8 @@ export const AI_CONFIG = {
 export const VECTOR_CONFIG = {
 	DEFAULT_MODEL: "text-embedding-004",
 	DEFAULT_IMAGE_MODEL: "multimodalembedding",
-	DEFAULT_DIMENSIONS: 768, // Google's text-embedding-004 produces 768-dimensional embeddings
+	DEFAULT_DIMENSIONS: 768, // Google's text-embedding-004 produces 768-dimensional embeddings by default
+	// Note: Both text and image embeddings use the same dimensions for consistency
 	SIMILARITY_THRESHOLD: 0.7,
 	MAX_CANDIDATES: 100,
 	DEFAULT_LIMIT: 10,
@@ -78,12 +79,14 @@ export const COOKIE_CONFIG = {
 	MAX_AGE: 7 * 24 * 60 * 60 * 1000, // 7 days
 	HTTP_ONLY: true,
 	// Secure should be true in production/staging (HTTPS), false in development (HTTP)
-	SECURE: process.env.NODE_ENV === "production" || process.env.NODE_ENV === "staging",
+	SECURE:
+		process.env.NODE_ENV === "production" || process.env.NODE_ENV === "staging",
 	// Use 'none' for cross-origin with credentials, 'lax' for same-origin
 	// 'none' requires secure: true, so we conditionally set it
-	SAME_SITE: (process.env.NODE_ENV === "production" || process.env.NODE_ENV === "staging")
-		? ("none" as const)
-		: ("lax" as const),
+	SAME_SITE:
+		process.env.NODE_ENV === "production" || process.env.NODE_ENV === "staging"
+			? ("none" as const)
+			: ("lax" as const),
 	PATH: "/",
 	// Only set domain if explicitly configured to avoid cross-domain issues
 	DOMAIN: process.env.COOKIE_DOMAIN || undefined,

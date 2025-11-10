@@ -34,6 +34,7 @@ export interface SearchFilter {
 	entities?: string[];
 	topics?: string[];
 	language?: string;
+	scoreThreshold?: number;
 }
 
 export interface SearchOptions {

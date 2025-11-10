@@ -358,6 +358,25 @@ const extractKeywords = (text: string): string[] => {
 		.map(([word]) => word);
 };
 
+const extractTopics = (text: string): string[] => {
+	// Simple topic extraction based on capitalized words and frequent terms
+	// In a real implementation, use NLP libraries or LLM-based topic modeling
+	const topics: string[] = [];
+
+	// Extract capitalized words (potential proper nouns/topics)
+	const capitalizedWords =
+		text.match(/\b[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*\b/g) || [];
+	const uniqueCapitalized = [...new Set(capitalizedWords)].slice(0, 5);
+
+	// Extract keywords as potential topics
+	const keywords = extractKeywords(text).slice(0, 5);
+
+	// Combine and deduplicate
+	topics.push(...uniqueCapitalized, ...keywords);
+
+	return [...new Set(topics)].slice(0, 10);
+};
+
 const documentProcessorService = {
 	processDocument,
 	processPDF,
@@ -371,6 +390,7 @@ const documentProcessorService = {
 	analyzeSentiment,
 	extractAuthor,
 	extractKeywords,
+	extractTopics,
 };
 
 export default documentProcessorService;
