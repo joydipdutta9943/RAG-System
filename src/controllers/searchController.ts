@@ -492,19 +492,19 @@ const aiStatusHandler = async (
 	try {
 		const quota = await aiAgentLangchainService.getRemainingQuota();
 
+		const modelName = process.env.GEMINI_MODEL || "gemini-2.5-flash";
+
 		return res.json({
 			quotaRemaining: quota,
 			status: "operational",
+			currentModel: modelName,
 			models: {
-				"gemini-2.5-flash": {
-					available: quota.geminiPro > 0,
-					remaining: quota.geminiPro,
-					dailyLimit: 100,
-				},
-				"gemini-2.0-flash-001": {
-					available: quota.gemini15 > 0,
-					remaining: quota.gemini15,
-					dailyLimit: 1500,
+				[modelName]: {
+					available: quota.geminiPro > 0 || quota.gemini15 > 0,
+					remainingPro: quota.geminiPro,
+					remainingStandard: quota.gemini15,
+					dailyLimitPro: 100,
+					dailyLimitStandard: 1500,
 				},
 			},
 		});

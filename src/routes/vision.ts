@@ -8,12 +8,12 @@ import uploadMiddleware from "../middleware/upload.js";
 const router = express.Router();
 
 // Apply authentication to all routes
-router.use(authMiddleware.authenticateToken);
+router.use(authMiddleware.requireAuth);
 
 // Analyze image with Gemini Vision
 router.post(
 	"/analyze",
-	rateLimitMiddleware.searchRateLimit,
+	rateLimitMiddleware.aiQueryRateLimit,
 	uploadMiddleware.uploadSingle,
 	uploadMiddleware.handleUploadError,
 	visionController.analyzeImageHandler,
@@ -22,7 +22,7 @@ router.post(
 // Extract chart/graph data from image
 router.post(
 	"/extract-chart",
-	rateLimitMiddleware.searchRateLimit,
+	rateLimitMiddleware.aiQueryRateLimit,
 	uploadMiddleware.uploadSingle,
 	uploadMiddleware.handleUploadError,
 	visionController.extractChartDataHandler,
@@ -31,7 +31,7 @@ router.post(
 // Analyze diagram/flowchart
 router.post(
 	"/analyze-diagram",
-	rateLimitMiddleware.searchRateLimit,
+	rateLimitMiddleware.aiQueryRateLimit,
 	uploadMiddleware.uploadSingle,
 	uploadMiddleware.handleUploadError,
 	visionController.analyzeDiagramHandler,
@@ -40,7 +40,7 @@ router.post(
 // Visual question answering
 router.post(
 	"/ask",
-	rateLimitMiddleware.searchRateLimit,
+	rateLimitMiddleware.aiQueryRateLimit,
 	uploadMiddleware.uploadSingle,
 	uploadMiddleware.handleUploadError,
 	[body("question").notEmpty().withMessage("Question is required")],
@@ -50,7 +50,7 @@ router.post(
 // Compare two images
 router.post(
 	"/compare",
-	rateLimitMiddleware.searchRateLimit,
+	rateLimitMiddleware.aiQueryRateLimit,
 	uploadMiddleware.uploadMultiple,
 	uploadMiddleware.handleUploadError,
 	visionController.compareImagesHandler,

@@ -3,7 +3,7 @@ import { logger } from "../config/logger.js";
 
 const genAI = new GoogleGenerativeAI(process.env.GOOGLE_AI_API_KEY || "");
 const model = genAI.getGenerativeModel({
-	model: "gemini-2.0-flash-exp",
+	model: process.env.GEMINI_MODEL || "gemini-2.5-flash",
 });
 
 interface MultilevelSummaries {
@@ -147,8 +147,8 @@ Provide numbered bullet points.`;
 		// Extract bullet points
 		const bulletPoints = response
 			.split("\n")
-			.filter((line) => line.trim().match(/^[\d\-\*•]/))
-			.map((line) => line.replace(/^[\d\-\*•.\s]+/, "").trim())
+			.filter((line) => line.trim().match(/^[\d\-*•]/))
+			.map((line) => line.replace(/^[\d\-*•.\s]+/, "").trim())
 			.filter((line) => line.length > 0)
 			.slice(0, maxPoints);
 
@@ -164,13 +164,14 @@ const generateAllSummaries = async (
 	content: string,
 ): Promise<MultilevelSummaries> => {
 	try {
-		const [oneSentence, paragraph, executive, bulletPoints] =
-			await Promise.all([
+		const [oneSentence, paragraph, executive, bulletPoints] = await Promise.all(
+			[
 				generateOneSentenceSummary(content),
 				generateParagraphSummary(content),
 				generateExecutiveSummary(content),
 				generateBulletPoints(content),
-			]);
+			],
+		);
 
 		// Generate chapters only for longer documents
 		let chapters: ChapterSummary[] | undefined;
@@ -251,7 +252,9 @@ Respond in JSON format:
 		const jsonMatch = response.match(/\{[\s\S]*\}/);
 		if (jsonMatch) {
 			const titleData = JSON.parse(jsonMatch[0]);
-			logger.info(`Generated ${titleData.titles?.length || 0} title suggestions`);
+			logger.info(
+				`Generated ${titleData.titles?.length || 0} title suggestions`,
+			);
 			return titleData;
 		}
 
@@ -309,8 +312,8 @@ Provide a list of actionable items.`;
 		// Extract action items
 		const actionItems = response
 			.split("\n")
-			.filter((line) => line.trim().match(/^[\d\-\*•]/))
-			.map((line) => line.replace(/^[\d\-\*•.\s]+/, "").trim())
+			.filter((line) => line.trim().match(/^[\d\-*•]/))
+			.map((line) => line.replace(/^[\d\-*•.\s]+/, "").trim())
 			.filter((line) => line.length > 0);
 
 		logger.info(`Extracted ${actionItems.length} action items`);

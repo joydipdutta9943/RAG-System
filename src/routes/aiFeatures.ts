@@ -7,28 +7,28 @@ import rateLimitMiddleware from "../middleware/rateLimit.js";
 const router = express.Router();
 
 // Apply authentication to all routes
-router.use(authMiddleware.authenticateToken);
+router.use(authMiddleware.requireAuth);
 
 // ==================== CATEGORIZATION ROUTES ====================
 
 // Categorize document
 router.post(
 	"/documents/:documentId/categorize",
-	rateLimitMiddleware.searchRateLimit,
+	rateLimitMiddleware.aiQueryRateLimit,
 	aiFeaturesController.categorizeDocumentHandler,
 );
 
 // Extract entities from document
 router.post(
 	"/documents/:documentId/extract-entities",
-	rateLimitMiddleware.searchRateLimit,
+	rateLimitMiddleware.aiQueryRateLimit,
 	aiFeaturesController.extractEntitiesHandler,
 );
 
 // Extract key points from document
 router.post(
 	"/documents/:documentId/key-points",
-	rateLimitMiddleware.searchRateLimit,
+	rateLimitMiddleware.aiQueryRateLimit,
 	[query("maxPoints").optional().isInt({ min: 1, max: 20 })],
 	aiFeaturesController.extractKeyPointsHandler,
 );
@@ -36,7 +36,7 @@ router.post(
 // Assess document quality
 router.post(
 	"/documents/:documentId/assess-quality",
-	rateLimitMiddleware.searchRateLimit,
+	rateLimitMiddleware.aiQueryRateLimit,
 	aiFeaturesController.assessDocumentQualityHandler,
 );
 
@@ -45,7 +45,7 @@ router.post(
 // Generate summaries (all levels or specific level)
 router.post(
 	"/documents/:documentId/summarize",
-	rateLimitMiddleware.searchRateLimit,
+	rateLimitMiddleware.aiQueryRateLimit,
 	[
 		query("level")
 			.optional()
@@ -64,7 +64,7 @@ router.post(
 // Rewrite content in different tone
 router.post(
 	"/documents/:documentId/rewrite",
-	rateLimitMiddleware.searchRateLimit,
+	rateLimitMiddleware.aiQueryRateLimit,
 	[
 		body("tone")
 			.notEmpty()
@@ -77,7 +77,7 @@ router.post(
 // Generate title suggestions
 router.post(
 	"/documents/:documentId/generate-titles",
-	rateLimitMiddleware.searchRateLimit,
+	rateLimitMiddleware.aiQueryRateLimit,
 	[query("count").optional().isInt({ min: 1, max: 10 })],
 	aiFeaturesController.generateTitlesHandler,
 );
@@ -85,7 +85,7 @@ router.post(
 // Generate combined report from multiple documents
 router.post(
 	"/documents/generate-report",
-	rateLimitMiddleware.searchRateLimit,
+	rateLimitMiddleware.aiQueryRateLimit,
 	[
 		body("documentIds")
 			.isArray({ min: 1 })
@@ -97,14 +97,14 @@ router.post(
 // Extract action items
 router.post(
 	"/documents/:documentId/action-items",
-	rateLimitMiddleware.searchRateLimit,
+	rateLimitMiddleware.aiQueryRateLimit,
 	aiFeaturesController.extractActionItemsHandler,
 );
 
 // Generate Q&A pairs for training
 router.post(
 	"/documents/:documentId/generate-qa",
-	rateLimitMiddleware.searchRateLimit,
+	rateLimitMiddleware.aiQueryRateLimit,
 	[query("count").optional().isInt({ min: 1, max: 20 })],
 	aiFeaturesController.generateQAPairsHandler,
 );

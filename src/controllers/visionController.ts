@@ -53,7 +53,9 @@ const extractChartDataHandler = async (
 		logger.info(`Chart data extraction requested by user: ${userId}`);
 
 		// Extract chart data
-		const chartData = await geminiVisionService.extractChartData(req.file.buffer);
+		const chartData = await geminiVisionService.extractChartData(
+			req.file.buffer,
+		);
 
 		return res.json({
 			success: true,

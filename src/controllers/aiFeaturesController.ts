@@ -120,11 +120,10 @@ const extractKeyPointsHandler = async (
 
 		logger.info(`Extracting key points from document: ${documentId}`);
 
-		const keyPointsData =
-			await documentCategorizationService.extractKeyPoints(
-				document.content,
-				Number(maxPoints),
-			);
+		const keyPointsData = await documentCategorizationService.extractKeyPoints(
+			document.content,
+			Number(maxPoints),
+		);
 
 		// Update document with key points
 		await prisma.document.update({
@@ -226,7 +225,9 @@ const generateSummariesHandler = async (
 			return res.status(404).json({ error: "Document not found" });
 		}
 
-		logger.info(`Generating summaries for document: ${documentId}, level: ${level}`);
+		logger.info(
+			`Generating summaries for document: ${documentId}, level: ${level}`,
+		);
 
 		let summaries: any = {};
 
@@ -236,18 +237,19 @@ const generateSummariesHandler = async (
 			);
 		} else if (level === "one-sentence") {
 			summaries.oneSentence =
-				await summarizationService.generateOneSentenceSummary(
-					document.content,
-				);
+				await summarizationService.generateOneSentenceSummary(document.content);
 		} else if (level === "paragraph") {
-			summaries.paragraph =
-				await summarizationService.generateParagraphSummary(document.content);
+			summaries.paragraph = await summarizationService.generateParagraphSummary(
+				document.content,
+			);
 		} else if (level === "executive") {
-			summaries.executive =
-				await summarizationService.generateExecutiveSummary(document.content);
+			summaries.executive = await summarizationService.generateExecutiveSummary(
+				document.content,
+			);
 		} else if (level === "chapters") {
-			summaries.chapters =
-				await summarizationService.generateChapterSummaries(document.content);
+			summaries.chapters = await summarizationService.generateChapterSummaries(
+				document.content,
+			);
 		} else if (level === "bullets") {
 			summaries.bulletPoints = await summarizationService.generateBulletPoints(
 				document.content,
@@ -292,12 +294,10 @@ const rewriteContentHandler = async (
 		}
 
 		if (!["formal", "casual", "technical", "simple"].includes(tone)) {
-			return res
-				.status(400)
-				.json({
-					error:
-						"Invalid tone. Must be one of: formal, casual, technical, simple",
-				});
+			return res.status(400).json({
+				error:
+					"Invalid tone. Must be one of: formal, casual, technical, simple",
+			});
 		}
 
 		logger.info(`Rewriting document ${documentId} in ${tone} tone`);

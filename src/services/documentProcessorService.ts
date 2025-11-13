@@ -202,7 +202,10 @@ const generateImageDescription = async (
 		const analysis = await geminiVisionService.analyzeImage(imageBuffer);
 		return analysis.description || "Image description unavailable";
 	} catch (error) {
-		logger.warn("Gemini Vision unavailable, using fallback description:", error);
+		logger.warn(
+			"Gemini Vision unavailable, using fallback description:",
+			error,
+		);
 		try {
 			const metadata = await sharp(imageBuffer).metadata();
 			return `Image with dimensions ${metadata.width}x${metadata.height} in ${metadata.format} format`;
@@ -264,8 +267,7 @@ const extractEntities = async (text: string): Promise<string[]> => {
 		logger.warn("AI entity extraction unavailable, using fallback:", error);
 		// Fallback to regex patterns
 		const entities: string[] = [];
-		const emailPattern =
-			/\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/g;
+		const emailPattern = /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/g;
 		const phonePattern = /\b\d{3}[-.]?\d{3}[-.]?\d{4}\b/g;
 		const urlPattern = /https?:\/\/[^\s]+/g;
 
@@ -284,8 +286,7 @@ const generateSummary = async (
 ): Promise<string> => {
 	try {
 		// Use AI for high-quality summarization
-		const summary =
-			await summarizationService.generateParagraphSummary(text);
+		const summary = await summarizationService.generateParagraphSummary(text);
 
 		// Trim to maxLength if needed
 		return summary.length > maxLength

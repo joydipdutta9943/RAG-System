@@ -35,16 +35,18 @@ let dailyRequestCount: RequestCounts = {
 
 const initialize = (): void => {
 	try {
+		const modelName = process.env.GEMINI_MODEL || "gemini-2.5-flash";
+
 		// Initialize LangChain ChatGoogleGenerativeAI models
 		gemini15Model = new ChatGoogleGenerativeAI({
-			model: "gemini-2.0-flash-001", // Updated to use available model
+			model: modelName,
 			apiKey: process.env.GOOGLE_AI_API_KEY || "",
 			maxOutputTokens: 1024,
 			temperature: 0.7,
 		});
 
 		geminiProModel = new ChatGoogleGenerativeAI({
-			model: "gemini-2.5-flash", // Updated to use available stable model
+			model: modelName,
 			apiKey: process.env.GOOGLE_AI_API_KEY || "",
 			maxOutputTokens: 2048,
 			temperature: 0.7,
@@ -215,14 +217,12 @@ const processQuery = async (
 	try {
 		// Choose model based on complexity and quota
 		let selectedModel: ChatGoogleGenerativeAI;
-		let modelName: string;
+		const modelName = process.env.GEMINI_MODEL || "gemini-2.5-flash";
 
 		if (complexity.isComplex && quota.geminiPro > 0) {
 			selectedModel = geminiProModel;
-			modelName = "gemini-2.5-flash";
 		} else if (quota.gemini15 > 0) {
 			selectedModel = gemini15Model;
-			modelName = "gemini-2.0-flash-001";
 		} else {
 			throw new Error("No available quota for any Gemini model");
 		}
@@ -249,10 +249,10 @@ const processQuery = async (
 
 		const processingTime = Date.now() - startTime;
 
-		// Increment usage counter
-		if (modelName === "gemini-2.0-flash-001") {
+		// Increment usage counter based on which model instance was used
+		if (selectedModel === gemini15Model) {
 			await incrementUsageCounter("gemini15");
-		} else if (modelName === "gemini-2.5-flash") {
+		} else if (selectedModel === geminiProModel) {
 			await incrementUsageCounter("geminiPro");
 		}
 

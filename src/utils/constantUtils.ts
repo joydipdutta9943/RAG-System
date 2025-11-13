@@ -78,12 +78,14 @@ export const COOKIE_CONFIG = {
 	MAX_AGE: 7 * 24 * 60 * 60 * 1000, // 7 days
 	HTTP_ONLY: true,
 	// Secure should be true in production/staging (HTTPS), false in development (HTTP)
-	SECURE: process.env.NODE_ENV === "production" || process.env.NODE_ENV === "staging",
+	SECURE:
+		process.env.NODE_ENV === "production" || process.env.NODE_ENV === "staging",
 	// Use 'none' for cross-origin with credentials, 'lax' for same-origin
 	// 'none' requires secure: true, so we conditionally set it
-	SAME_SITE: (process.env.NODE_ENV === "production" || process.env.NODE_ENV === "staging")
-		? ("none" as const)
-		: ("lax" as const),
+	SAME_SITE:
+		process.env.NODE_ENV === "production" || process.env.NODE_ENV === "staging"
+			? ("none" as const)
+			: ("lax" as const),
 	PATH: "/",
 	// Only set domain if explicitly configured to avoid cross-domain issues
 	DOMAIN: process.env.COOKIE_DOMAIN || undefined,

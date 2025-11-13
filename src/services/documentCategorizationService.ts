@@ -3,7 +3,7 @@ import { logger } from "../config/logger.js";
 
 const genAI = new GoogleGenerativeAI(process.env.GOOGLE_AI_API_KEY || "");
 const model = genAI.getGenerativeModel({
-	model: "gemini-2.0-flash-exp",
+	model: process.env.GEMINI_MODEL || "gemini-2.5-flash",
 	generationConfig: {
 		temperature: 0.3, // Lower temperature for more consistent categorization
 	},
@@ -116,7 +116,9 @@ Respond in JSON format:
 	}
 };
 
-const extractEntities = async (content: string): Promise<EntityExtractionResult> => {
+const extractEntities = async (
+	content: string,
+): Promise<EntityExtractionResult> => {
 	try {
 		const prompt = `Extract all important entities from this text:
 
@@ -199,7 +201,9 @@ Respond in JSON format:
 		const jsonMatch = response.match(/\{[\s\S]*\}/);
 		if (jsonMatch) {
 			const keyPointsData = JSON.parse(jsonMatch[0]);
-			logger.info(`Extracted ${keyPointsData.keyPoints?.length || 0} key points`);
+			logger.info(
+				`Extracted ${keyPointsData.keyPoints?.length || 0} key points`,
+			);
 			return keyPointsData;
 		}
 
@@ -223,7 +227,10 @@ const calculateReadabilityScore = (content: string): number => {
 	// Flesch Reading Ease Score
 	const sentences = content.split(/[.!?]+/).filter((s) => s.trim().length > 0);
 	const words = content.split(/\s+/).filter((w) => w.length > 0);
-	const syllables = words.reduce((count, word) => count + countSyllables(word), 0);
+	const syllables = words.reduce(
+		(count, word) => count + countSyllables(word),
+		0,
+	);
 
 	if (sentences.length === 0 || words.length === 0) return 0;
 
@@ -324,8 +331,7 @@ Respond with just a number between -1 and 1.`;
 // Helper functions
 const extractEntitiesWithRegex = (content: string): EntityExtractionResult => {
 	const emailRegex = /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/g;
-	const phoneRegex =
-		/(\+\d{1,3}[\s-]?)?\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}\b/g;
+	const phoneRegex = /(\+\d{1,3}[\s-]?)?\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}\b/g;
 	const urlRegex = /https?:\/\/[^\s]+/g;
 	const dateRegex =
 		/\b\d{1,2}[/-]\d{1,2}[/-]\d{2,4}\b|\b\d{4}[/-]\d{1,2}[/-]\d{1,2}\b/g;
@@ -374,7 +380,8 @@ const calculateBasicQuality = (content: string): number => {
 	const capitalizedSentences = sentences.filter((s) =>
 		/^[A-Z]/.test(s.trim()),
 	).length;
-	const capitalizationRatio = capitalizedSentences / Math.max(1, sentences.length);
+	const capitalizationRatio =
+		capitalizedSentences / Math.max(1, sentences.length);
 	score += capitalizationRatio * 10;
 
 	// Punctuation usage

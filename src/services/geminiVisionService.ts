@@ -6,7 +6,7 @@ const genAI = new GoogleGenerativeAI(process.env.GOOGLE_AI_API_KEY || "");
 
 // Initialize vision models
 const visionModel = genAI.getGenerativeModel({
-	model: "gemini-1.5-flash", // Supports vision and multimodal
+	model: process.env.GEMINI_MODEL || "gemini-2.5-flash", // Supports vision and multimodal
 });
 
 interface VisualAnalysisResult {
@@ -43,7 +43,9 @@ interface VisualQuestionAnswer {
 	sources: string[];
 }
 
-const analyzeImage = async (imageBuffer: Buffer): Promise<VisualAnalysisResult> => {
+const analyzeImage = async (
+	imageBuffer: Buffer,
+): Promise<VisualAnalysisResult> => {
 	try {
 		const base64Image = imageBuffer.toString("base64");
 		const imagePart = {
@@ -93,8 +95,12 @@ Format your response as JSON:
 			description: response,
 			detectedObjects: extractObjects(response),
 			hasText: response.toLowerCase().includes("text"),
-			hasChart: response.toLowerCase().includes("chart") || response.toLowerCase().includes("graph"),
-			hasDiagram: response.toLowerCase().includes("diagram") || response.toLowerCase().includes("flowchart"),
+			hasChart:
+				response.toLowerCase().includes("chart") ||
+				response.toLowerCase().includes("graph"),
+			hasDiagram:
+				response.toLowerCase().includes("diagram") ||
+				response.toLowerCase().includes("flowchart"),
 			imageCategory: extractCategory(response),
 			confidence: 70,
 		};
@@ -104,7 +110,9 @@ Format your response as JSON:
 	}
 };
 
-const extractChartData = async (imageBuffer: Buffer): Promise<ChartDataExtraction> => {
+const extractChartData = async (
+	imageBuffer: Buffer,
+): Promise<ChartDataExtraction> => {
 	try {
 		const base64Image = imageBuffer.toString("base64");
 		const imagePart = {
@@ -151,7 +159,9 @@ Format your response as JSON:
 	}
 };
 
-const analyzeDiagram = async (imageBuffer: Buffer): Promise<DiagramAnalysis> => {
+const analyzeDiagram = async (
+	imageBuffer: Buffer,
+): Promise<DiagramAnalysis> => {
 	try {
 		const base64Image = imageBuffer.toString("base64");
 		const imagePart = {
