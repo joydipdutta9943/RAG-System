@@ -61,6 +61,8 @@ export interface DocumentMetadata {
 	customFields?: Record<string, any>;
 	language?: string;
 	extractedImages?: number;
+	originalOcrText?: string;
+	originalDescription?: string;
 }
 
 export interface ProcessedDocument {

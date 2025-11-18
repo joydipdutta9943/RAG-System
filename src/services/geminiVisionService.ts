@@ -359,6 +359,47 @@ const extractCategory = (text: string): string => {
 	return "image";
 };
 
+const convertDiagramToMermaid = async (
+	imageBuffer: Buffer,
+): Promise<string> => {
+	try {
+		const base64Image = imageBuffer.toString("base64");
+		const imagePart = {
+			inlineData: {
+				data: base64Image,
+				mimeType: "image/jpeg",
+			},
+		};
+
+		const prompt = `Analyze this diagram/flowchart and convert it into Mermaid.js code.
+		
+		Rules:
+		1. Output ONLY the Mermaid code block.
+		2. Do not include markdown backticks or "mermaid" language identifier.
+		3. Use standard Mermaid syntax (graph TD, sequenceDiagram, etc.).
+		4. Ensure all nodes and relationships are captured accurately.
+		5. If text is illegible, use reasonable placeholders.
+		
+		Example Output:
+		graph TD
+		A[Start] --> B{Decision}
+		B -->|Yes| C[Process]
+		B -->|No| D[End]`;
+
+		const result = await visionModel.generateContent([prompt, imagePart]);
+		const mermaidCode = result.response.text().trim();
+
+		// Clean up response if it contains markdown code blocks
+		const cleanCode = mermaidCode.replace(/```mermaid\n?|```/g, "").trim();
+
+		logger.info("Diagram converted to Mermaid code");
+		return cleanCode;
+	} catch (error) {
+		logger.error("Error converting diagram to Mermaid:", error);
+		throw new Error("Failed to convert diagram to Mermaid");
+	}
+};
+
 const geminiVisionService = {
 	analyzeImage,
 	extractChartData,
@@ -366,6 +407,7 @@ const geminiVisionService = {
 	answerVisualQuestion,
 	compareImages,
 	detectTextInImage,
+	convertDiagramToMermaid,
 };
 
 export default geminiVisionService;

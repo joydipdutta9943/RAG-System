@@ -5,6 +5,7 @@ import type { Logger } from "winston";
 import { logger } from "./config/logger.js";
 import loaderService from "./loaders/index.js";
 import errorHandlerMiddleware from "./middleware/errorHandlerMiddleware.js";
+import agentRoutes from "./routes/agent.js";
 // Import routes
 import aiFeaturesRoutes from "./routes/aiFeatures.js";
 import authRoutes from "./routes/auth.js";
@@ -48,6 +49,7 @@ const startServer = async () => {
 		express.use("/api/search", searchRoutes);
 		express.use("/api/vision", visionRoutes);
 		express.use("/api/ai", aiFeaturesRoutes);
+		express.use("/api/agent", agentRoutes);
 		express.use("/health", healthRoutes.setupHealthRoutes());
 
 		console.log("🛣️  Routes registered");
