@@ -18,128 +18,43 @@ model User {
   role      Role     @default(USER)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  
+
   // Relations
-  documents Document[]
-  queries   Query[]
-  
+  documents   Document[]
+  chatHistory ChatHistory[]
+
   @@map("users")
 }
 
 model Document {
-  id          String   @id @default(cuid()) @map("_id")
-  title       String
-  content     String
-  fileType    String
-  fileSize    Int
-  embedding   Float[]
-  metadata    Json?
-  summary     String?
-  entities    String[]
-  topics      String[]
-  sentiment   Float?
-  language    String?
+  id        String   @id @default(cuid()) @map("_id")
+  title     String
+  content   String
+  fileType  String
+  fileSize  Int
+  embedding Float[]
+  metadata  Json?
+  summary   String?
+  entities  String[]
+  topics    String[]
+  sentiment Float?
+  language  String?
+  category          String? // Auto-categorized document type
+  categories        String[] // Multiple categories
+  keyPoints         String[] // Extracted key points
+  summaries         Json? // Multiple summary levels (one-sentence, paragraph, executive, chapters)
+  extractedEntities Json? // Structured entity data with types
+  readabilityScore  Float? // Document readability score
+  qualityScore      Float? // AI-assessed quality score
 
-  // Phase 1: Enhanced AI features
-  category    String?        // Auto-categorized document type
-  categories  String[]       // Multiple categories
-  keyPoints   String[]       // Extracted key points
-  summaries   Json?          // Multiple summary levels (one-sentence, paragraph, executive, chapters)
-  extractedEntities Json?    // Structured entity data with types
-  readabilityScore Float?    // Document readability score
-  qualityScore Float?        // AI-assessed quality score
-
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relations
-  userId      String
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  images      Image[]
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("documents")
-}
-
-model Image {
-  id          String   @id @default(cuid()) @map("_id")
-  documentId  String
-  description String?
-  ocrText     String?
-  embedding   Float[]
-  metadata    Json?
-
-  // Phase 1: Gemini Vision features
-  visualAnalysis Json?      // Gemini Vision analysis results
-  extractedData  Json?      // Structured data from charts/tables
-  detectedObjects String[]  // Objects detected in image
-  imageCategory  String?    // Category of image (chart, diagram, photo, etc.)
-  hasText        Boolean    @default(false)
-  hasChart       Boolean    @default(false)
-  hasDiagram     Boolean    @default(false)
-
-  createdAt   DateTime @default(now())
-
-  // Relations
-  document    Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
-
-  @@map("images")
-}
-
-model Query {
-  id          String   @id @default(cuid()) @map("_id")
-  query       String
-  queryType   QueryType @default(TEXT)
-  response    String
-  sources     String[]
-  confidence  Float?
-  processingTime Int?
-  modelUsed   String?
-  metadata    Json?
-  createdAt   DateTime @default(now())
-  
-  // Relations
-  userId      String
-  user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  documentIds String[]
-  
-  @@map("queries")
-}
-
-model EmbeddingModel {
-  id          String   @id @default(cuid()) @map("_id")
-  name        String   @unique
-  version     String
-  dimensions  Int
-  modelType   ModelType
-  isActive    Boolean  @default(false)
-  performance Json?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
-  @@map("embedding_models")
-}
-
-model SystemMetrics {
-  id              String   @id @default(cuid()) @map("_id")
-  metricType      String
-  value           Float
-  metadata        Json?
-  timestamp       DateTime @default(now())
-  
-  @@map("system_metrics")
-}
-
-model ApiUsage {
-  id          String   @id @default(cuid()) @map("_id")
-  apiProvider String
-  endpoint    String
-  requestCount Int
-  responseTime Float?
-  errorCount  Int      @default(0)
-  cost        Float?
-  date        DateTime @default(now())
-  
-  @@map("api_usage")
 }
 
 enum Role {
@@ -148,15 +63,27 @@ enum Role {
   MODERATOR
 }
 
-enum QueryType {
-  TEXT
-  IMAGE
-  MULTIMODAL
-  VOICE
+model ChatHistory {
+  id        String   @id @default(cuid()) @map("_id")
+  userId    String
+  message   String
+  response  String
+  sessionId String
+  toolsUsed String[]
+  createdAt DateTime @default(now())
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("chat_history")
 }
 
-enum ModelType {
-  TEXT_EMBEDDING
-  IMAGE_EMBEDDING
-  MULTIMODAL_EMBEDDING
+model Analytics {
+  id         String   @id @default(cuid()) @map("_id")
+  metricType String
+  value      Float
+  metadata   Json?
+  timestamp  DateTime @default(now())
+
+  @@map("analytics")
 }

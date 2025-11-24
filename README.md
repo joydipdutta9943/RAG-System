@@ -76,6 +76,10 @@ The agent doesn't just search; it *understands*.
 *   **Entity Extraction**: Identifies key people, organizations, and dates.
 *   **Semantic Search**: Finds relevant information even if keywords don't match exactly.
 
+### 💬 Chat History & Analytics
+*   **Persistent Conversations**: Automatically saves all agent interactions for continuity.
+*   **Usage Metrics**: Tracks key metrics for auditing, performance analysis, and insights.
+
 ---
 
 ## 🛠️ Technology Stack
@@ -155,6 +159,14 @@ curl -X POST http://localhost:3000/api/agent/chat \
     "sessionId": "session_123"
   }'
 ```
+
+### API Endpoints
+
+| Method | Endpoint | Description |
+|---|---|---|
+| `POST` | `/api/agent/chat` | Send a message to the unified agent (supports text & images) |
+| `GET` | `/api/agent/history` | Retrieve chat history for the authenticated user |
+| `GET` | `/api/agent/analytics` | Retrieve system analytics (Admin) |
 
 ### Document Management
 *   `POST /api/documents/upload`: Upload and process files.

@@ -54,6 +54,16 @@ file: [architecture_diagram.png]
 }
 ```
 
+### Get Chat History
+```http
+GET /api/agent/history
+```
+
+### Get Analytics
+```http
+GET /api/agent/analytics
+```
+
 ---
 
 ## 🍪 Authentication

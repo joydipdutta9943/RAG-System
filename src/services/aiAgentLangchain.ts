@@ -2,6 +2,7 @@ import {
 	HumanMessage,
 } from "@langchain/core/messages";
 import { ChatGoogleGenerativeAI } from "@langchain/google-genai";
+import { prisma } from "../config/database.js";
 import { logger } from "../config/logger.js";
 import { geminiVisionService, vectorSearchService } from "./index.js";
 
@@ -134,6 +135,30 @@ const processAgentMessage = async (
 				finalResponse = result.content as string;
 			}
 		}
+
+		// Save to Chat History
+		await prisma.chatHistory.create({
+			data: {
+				userId,
+				message,
+				response: finalResponse,
+				sessionId: sessionId || `session_${Date.now()}`,
+				toolsUsed,
+			},
+		});
+
+		// Track Analytics
+		await prisma.analytics.create({
+			data: {
+				metricType: "agent_query",
+				value: 1,
+				metadata: {
+					userId,
+					toolsUsed,
+					hasFile: !!file,
+				},
+			},
+		});
 
 		return {
 			content: finalResponse,

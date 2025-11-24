@@ -23,4 +23,10 @@ router.post(
 	agentController.chatHandler,
 );
 
+// Get Chat History
+router.get("/history", agentController.getHistoryHandler);
+
+// Get Analytics (Admin only in real app, open for demo)
+router.get("/analytics", agentController.getAnalyticsHandler);
+
 export default router;
