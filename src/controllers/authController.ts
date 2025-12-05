@@ -167,7 +167,6 @@ const getProfileHandler = async (
 				_count: {
 					select: {
 						documents: true,
-						queries: true,
 					},
 				},
 			},

@@ -65,22 +65,10 @@ const uploadDocumentHandler = async (
 				entities,
 				sentiment,
 				language: processedDoc.metadata.language,
+				base64Content: file.buffer.toString("base64"),
 				userId,
-				images: {
-					create: processedDoc.images.map((img) => ({
-						description: img.description,
-						ocrText: img.ocrText,
-						embedding: img.embedding,
-						metadata: JSON.parse(JSON.stringify(img.metadata)),
-					})),
-				},
 			},
-			include: {
-				images: true,
-				_count: {
-					select: { images: true },
-				},
-			},
+			include: {},
 		});
 
 		logger.info(`Document processed and saved: ${document.id}`);
@@ -96,7 +84,7 @@ const uploadDocumentHandler = async (
 				entities: document.entities,
 				sentiment: document.sentiment,
 				language: document.language,
-				imageCount: document._count.images,
+
 				createdAt: document.createdAt,
 			},
 		});
@@ -156,15 +144,8 @@ const batchUploadHandler = async (
 						entities,
 						sentiment,
 						language: processedDoc.metadata.language,
+						base64Content: file.buffer.toString("base64"),
 						userId,
-						images: {
-							create: processedDoc.images.map((img) => ({
-								description: img.description,
-								ocrText: img.ocrText,
-								embedding: img.embedding,
-								metadata: JSON.parse(JSON.stringify(img.metadata)),
-							})),
-						},
 					},
 					select: {
 						id: true,
@@ -251,9 +232,6 @@ const getDocumentsHandler = async (
 					language: true,
 					createdAt: true,
 					updatedAt: true,
-					_count: {
-						select: { images: true },
-					},
 				},
 				orderBy: { [sortBy]: sortOrder },
 				skip,
@@ -583,9 +561,7 @@ const getDocumentHandler = async (
 				id: documentId,
 				userId,
 			},
-			include: {
-				images: true,
-			},
+			include: {},
 		});
 
 		if (!document) {

@@ -110,13 +110,10 @@ analyticsQueue.process("update-metrics", async (job) => {
 	const { metricType, value, metadata } = job.data;
 
 	try {
-		await prisma.systemMetrics.create({
-			data: {
-				metricType,
-				value,
-				metadata,
-				timestamp: new Date(),
-			},
+		logger.info("Analytics metric received (SystemMetrics model removed):", {
+			metricType,
+			value,
+			metadata,
 		});
 
 		return { success: true };

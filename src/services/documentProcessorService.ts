@@ -288,7 +288,7 @@ const extractEntities = async (text: string): Promise<string[]> => {
 
 const generateSummary = async (
 	text: string,
-	maxLength: number = 200,
+	maxLength: number = 1000,
 ): Promise<string> => {
 	try {
 		const summary = await summarizationService.generateParagraphSummary(text);

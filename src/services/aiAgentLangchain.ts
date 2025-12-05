@@ -1,6 +1,4 @@
-import {
-	HumanMessage,
-} from "@langchain/core/messages";
+import { HumanMessage } from "@langchain/core/messages";
 import { ChatGoogleGenerativeAI } from "@langchain/google-genai";
 import { prisma } from "../config/database.js";
 import { logger } from "../config/logger.js";
@@ -173,7 +171,7 @@ const processAgentMessage = async (
 
 const aiAgentLangchainService = {
 	initialize,
-	processAgentMessage
+	processAgentMessage,
 };
 
 export default aiAgentLangchainService;

@@ -27,18 +27,18 @@ model User {
 }
 
 model Document {
-  id        String   @id @default(cuid()) @map("_id")
-  title     String
-  content   String
-  fileType  String
-  fileSize  Int
-  embedding Float[]
-  metadata  Json?
-  summary   String?
-  entities  String[]
-  topics    String[]
-  sentiment Float?
-  language  String?
+  id                String   @id @default(cuid()) @map("_id")
+  title             String
+  content           String
+  fileType          String
+  fileSize          Int
+  embedding         Float[]
+  metadata          Json?
+  summary           String?
+  entities          String[]
+  topics            String[]
+  sentiment         Float?
+  language          String?
   category          String? // Auto-categorized document type
   categories        String[] // Multiple categories
   keyPoints         String[] // Extracted key points
@@ -46,6 +46,7 @@ model Document {
   extractedEntities Json? // Structured entity data with types
   readabilityScore  Float? // Document readability score
   qualityScore      Float? // AI-assessed quality score
+  base64Content     String? // Base64 encoded file content
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
