@@ -1,46 +1,51 @@
-# Simple Dockerfile for Enhanced RAG System
-FROM oven/bun:1-alpine
-
+# --- Stage 1: Builder ---
+FROM oven/bun:1-alpine AS builder
 WORKDIR /app
 
-# Install system dependencies
+# Install build dependencies (if any needed for native modules)
+# We only copy package files first to leverage Docker caching
+COPY package.json bun.lock ./
+
+# Install dependencies in production mode
+# --frozen-lockfile ensures reproducible builds
+RUN bun install --frozen-lockfile --production
+
+# Generate Prisma Client
+COPY prisma ./prisma
+RUN bunx prisma generate
+
+# --- Stage 2: Production Runner ---
+FROM oven/bun:1-alpine
+WORKDIR /app
+
+# Install System Dependencies (OCR, etc.)
+# && rm -rf /var/cache/apk/* reduces image size significantly
 RUN apk add --no-cache \
     poppler-utils \
     tesseract-ocr \
     tesseract-ocr-data-eng \
     imagemagick \
-    curl
+    curl \
+    && rm -rf /var/cache/apk/*
 
-# Copy package files and install dependencies
-COPY package.json bun.lock ./
-RUN bun install
+# Copy node_modules and prisma client from builder
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 
 # Copy application code
 COPY . .
 
-# Generate Prisma client
-RUN bunx prisma generate
+# Cloud Run ignores HEALTHCHECK in Dockerfile, but it's good for local testing
+# We remove it here to save a tiny bit of layer overhead, 
+# relying instead on Cloud Run's built-in health probes.
 
-# Create logs directory
-RUN mkdir -p logs
-
-# Expose port
-EXPOSE 3000
-
-# Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:3000/health || exit 1
-
-# Environment (set these in your deployment or .env file)
+# Set Environment Variables
 ENV NODE_ENV=production
-ENV PORT=3000
+# Cloud Run injects the PORT variable automatically (usually 8080)
+ENV PORT=8080 
 
-# Note: Set these environment variables in production deployment:
-# - FRONTEND_URL=https://your-frontend-domain.com
-# - COOKIE_DOMAIN=.your-domain.com
-# - JWT_SECRET=your-super-secret-jwt-key
-# - DATABASE_URL=your-mongodb-connection-string
-# - REDIS_URL=your-redis-connection-string
+# Expose the port (Documentation only)
+EXPOSE 8080
 
-# Start application directly from source (Bun runs TypeScript natively)
+# Start command
 CMD ["bun", "run", "src/main.ts"]
