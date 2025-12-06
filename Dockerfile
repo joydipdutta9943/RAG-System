@@ -42,8 +42,8 @@ COPY . .
 # Set Environment Variables
 ENV NODE_ENV=production
 # Cloud Run injects the PORT variable automatically (usually 8080)
-ENV PORT=3000
-EXPOSE 3000
+ENV PORT=8080
+EXPOSE 8080
 
 # Start command
 CMD ["bun", "run", "src/main.ts"]
