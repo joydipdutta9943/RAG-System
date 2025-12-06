@@ -1,72 +1,92 @@
-name: Deploy to Azure VM
+name: Deploy to Cloud Run
 
 on:
   push:
     branches:
-      - main  # Deploy when pushing to main branch
-      - master  # Or master, depending on your default branch
-  workflow_dispatch:  # Allow manual trigger
+      - main
+  workflow_dispatch: # Allows manual deployment button
+
+env:
+  PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+  REGION: asia-south1              # Iowa (Low CO2, cheap)
+  REPO_NAME: rag-system-backend    # Name of your Artifact Registry Repo
+  SERVICE_NAME: rag-system-backend # Name of your Cloud Run Service
 
 jobs:
-  azureuser:
-    name: Deploy Application
+  deploy:
+    name: Build & Deploy
     runs-on: ubuntu-latest
     
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      
-      - name: Setup SSH
+
+      # 1. Authenticate with Google Cloud
+      - name: Google Auth
+        id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: '${{ secrets.GCP_SA_KEY }}'
+
+      # 2. Setup gcloud CLI
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      # 3. Authenticate Docker with Artifact Registry
+      - name: Configure Docker
         run: |
-          mkdir -p ~/.ssh
-          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/deploy_key
-          chmod 600 ~/.ssh/deploy_key
-          ssh-keyscan -H ${{ secrets.VM_HOST }} >> ~/.ssh/known_hosts
-      
-      - name: Deploy to Azure VM
-        env:
-          VM_HOST: ${{ secrets.VM_HOST }}
-          VM_USERNAME: ${{ secrets.VM_USERNAME }}
+          gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev
+
+      # 4. Build and Push Container
+      # We use the Commit SHA as the tag to ensure unique versions
+      - name: Build and Push Docker Image
         run: |
-          ssh -i ~/.ssh/deploy_key $VM_USERNAME@$VM_HOST << 'ENDSSH'
-            set -e
-            
-            echo "🚀 Starting deployment..."
-            
-            # Navigate to project directory
-            cd ~/RAG-System  # Change this to your actual repo name
-            
-            # Pull latest changes
-            echo "📥 Pulling latest code..."
-            git pull origin master
-            
-            # Stop existing containers
-            echo "🛑 Stopping containers..."
-            docker-compose down
-            
-            # Rebuild and start containers
-            echo "🏗️ Building and starting containers..."
-            docker-compose build --no-cache
-            docker-compose up -d
-            
-            # Wait for containers to be healthy
-            echo "⏳ Waiting for containers to be healthy..."
-            sleep 10
-            
-            # Check container status
-            echo "✅ Checking container status..."
-            docker-compose ps
-            
-            # Clean up old images
-            echo "🧹 Cleaning up old images..."
-            docker image prune -f
-            
-            echo "✨ Deployment completed successfully!"
-          ENDSSH
-      
-      - name: Verify Deployment
+          docker build -t ${{ env.GAR_LOCATION }}/${{ env.PROJECT_ID }}/${{ env.REPO_NAME }}/${{ env.SERVICE_NAME }}:${{ github.sha }} .
+          docker push ${{ env.GAR_LOCATION }}/${{ env.PROJECT_ID }}/${{ env.REPO_NAME }}/${{ env.SERVICE_NAME }}:${{ github.sha }}
+
+      # 5. Deploy to Cloud Run
+      # --memory 2Gi sets the RAM to 2GB as requested
+      # --max-instances 1 prevents costs from exploding if you get DDOSed
+      - name: Deploy to Cloud Run
+        uses: google-github-actions/deploy-cloudrun@v2
+        with:
+          service: ${{ env.SERVICE_NAME }}
+          region: ${{ env.REGION }}
+          image: ${{ env.GAR_LOCATION }}/${{ env.PROJECT_ID }}/${{ env.REPO_NAME }}/${{ env.SERVICE_NAME }}:${{ github.sha }}
+          flags: |
+            --allow-unauthenticated
+            --memory=2Gi
+            --cpu=1
+            --max-instances=3
+            --port=8080
+
+      # 6. CRITICAL: Cleanup Old Images (Free Tier Protection)
+      # This script deletes all images except the one we just deployed and the 'latest' one.
+      # It prevents your Artifact Registry from exceeding the 500MB free limit.
+      - name: Cleanup Old Images
         run: |
-          echo "🔍 Verifying deployment..."
-          sleep 5
-          curl -f http://${{ secrets.HOST_DOMAIN }}/health || exit 1
-          echo "✅ Application is responding!"
+          echo "🧹 Starting cleanup of old images..."
+          
+          # List all image digests, sorted by date (oldest first), excluding the current deployment
+          gcloud artifacts docker images list ${{ env.GAR_LOCATION }}/${{ env.PROJECT_ID }}/${{ env.REPO_NAME }}/${{ env.SERVICE_NAME }} \
+            --sort-by="~UPDATE_TIME" \
+            --format="value(DIGEST)" \
+            --filter="tags!=${{ github.sha }}" > images_to_delete.txt
+
+          # Keep the most recent 3 images (safety buffer)
+          # We delete everything else to save space
+          COUNT=$(wc -l < images_to_delete.txt)
+          if [ "$COUNT" -gt 3 ]; then
+            HEAD_COUNT=$(($COUNT - 3))
+            echo "Found $COUNT images. Deleting $HEAD_COUNT old images..."
+            head -n $HEAD_COUNT images_to_delete.txt | while read DIGEST; do
+              gcloud artifacts docker images delete \
+                ${{ env.GAR_LOCATION }}/${{ env.PROJECT_ID }}/${{ env.REPO_NAME }}/${{ env.SERVICE_NAME }}@$DIGEST \
+                --delete-tags --quiet
+            done
+          else
+             echo "Only $COUNT images found. No cleanup needed."
+          fi
+
+      - name: Show Live URL
+        run: echo "🚀 Deployed successfully! Your app is live."
