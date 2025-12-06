@@ -1,11 +1,11 @@
+import agentController from "./agentController.js";
 import authController from "./authController.js";
 import documentController from "./documentController.js";
 import healthController from "./healthController.js";
-import searchController from "./searchController.js";
 
 export {
-	documentController,
+	agentController,
 	authController,
-	searchController,
+	documentController,
 	healthController,
 };

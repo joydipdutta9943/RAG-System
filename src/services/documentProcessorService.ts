@@ -8,7 +8,10 @@ import type {
 	ProcessedDocument,
 	ProcessedImage,
 } from "../types/documentTypes.js";
+import documentCategorizationService from "./documentCategorizationService.js";
 import embeddingService from "./embeddingService.js";
+import geminiVisionService from "./geminiVisionService.js";
+import summarizationService from "./summarizationService.js";
 
 const processDocument = async (
 	fileBuffer: Buffer,
@@ -43,42 +46,68 @@ const processDocument = async (
 	}
 };
 
+// Unified enrichment function
+const enrichDocumentContent = async (text: string) => {
+	try {
+		// Run AI tasks in parallel for performance
+		const [language, entities, summary, sentiment, category] =
+			await Promise.all([
+				detectLanguage(text),
+				extractEntities(text),
+				generateSummary(text),
+				analyzeSentiment(text),
+				documentCategorizationService.categorizeDocument(
+					text,
+					"Untitled",
+					"unknown",
+				),
+			]);
+
+		return {
+			language,
+			entities,
+			summary,
+			sentiment,
+			category: category.primary,
+			keywords: extractKeywords(text),
+			author: extractAuthor(text),
+		};
+	} catch (error) {
+		logger.warn("Error during document enrichment:", error);
+		// Return partial/fallback data
+		return {
+			language: "unknown",
+			entities: [],
+			summary: text.substring(0, 200),
+			sentiment: 0,
+			category: "uncategorized",
+			keywords: [],
+		};
+	}
+};
+
 const processPDF = async (
 	fileBuffer: Buffer,
 	fileSize: number,
 	redisClient?: RedisClientType,
 ): Promise<ProcessedDocument> => {
 	try {
-		// Extract text from PDF
 		const pdfData = await new PDFParse({ data: fileBuffer }).getText();
+		const text = pdfData.text;
 
-		// Generate text embedding
 		const embedding = await embeddingService.generateTextEmbedding(
-			pdfData.text,
+			text,
 			redisClient,
 		);
-
-		// Detect language (basic implementation)
-		const language = detectLanguage(pdfData.text);
-
-		// Extract entities
-		const _entities = await extractEntities(pdfData.text);
-
-		// Generate summary
-		const _summary = await generateSummary(pdfData.text);
-
-		// Analyze sentiment
-		const _sentiment = await analyzeSentiment(pdfData.text);
+		const enrichment = await enrichDocumentContent(text);
 
 		return {
 			title: "PDF Document",
-			content: pdfData.text,
+			content: text,
 			fileSize,
 			metadata: {
 				pageCount: pdfData.total,
-				language,
-				author: extractAuthor(pdfData.text),
-				keywords: extractKeywords(pdfData.text),
+				...enrichment,
 			},
 			images: [],
 			embedding,
@@ -100,19 +129,14 @@ const processTextFile = async (
 			content,
 			redisClient,
 		);
-		const language = detectLanguage(content);
-		const _entities = await extractEntities(content);
-		const _summary = await generateSummary(content);
-		const _sentiment = await analyzeSentiment(content);
+		const enrichment = await enrichDocumentContent(content);
 
 		return {
 			title: "Text Document",
 			content,
 			fileSize,
 			metadata: {
-				language,
-				author: extractAuthor(content),
-				keywords: extractKeywords(content),
+				...enrichment,
 			},
 			images: [],
 			embedding,
@@ -130,14 +154,28 @@ const processImageFile = async (
 ): Promise<ProcessedDocument> => {
 	try {
 		const image = await processImage(fileBuffer, redisClient);
-		const embedding = image.embedding;
+
+		// Combine description and OCR text for a rich text representation
+		const combinedText = `Image Description: ${image.description}\n\nExtracted Text: ${image.ocrText}`;
+
+		// Generate text embedding from the combined text
+		const embedding = await embeddingService.generateTextEmbedding(
+			combinedText,
+			redisClient,
+		);
+
+		// Now enrich the image document just like a text document!
+		const enrichment = await enrichDocumentContent(combinedText);
 
 		return {
 			title: "Image Document",
-			content: image.ocrText || "",
+			content: combinedText,
 			fileSize,
 			metadata: {
 				extractedImages: 1,
+				originalOcrText: image.ocrText,
+				originalDescription: image.description,
+				...enrichment, // Add summary, entities, sentiment, etc.
 			},
 			images: [image],
 			embedding,
@@ -153,10 +191,8 @@ const processImage = async (
 	redisClient?: RedisClientType,
 ): Promise<ProcessedImage> => {
 	try {
-		// Get image metadata
 		const metadata = await sharp(imageBuffer).metadata();
 
-		// Perform OCR
 		const ocrResult = await Tesseract.recognize(imageBuffer, "eng", {
 			logger: (m) => {
 				if (m.status === "recognizing text") {
@@ -165,13 +201,12 @@ const processImage = async (
 			},
 		});
 
-		// Generate image embedding
+		// We still generate a legacy image embedding if needed, but text embedding is primary now
 		const embedding = await embeddingService.generateImageEmbedding(
 			imageBuffer,
 			redisClient,
 		);
 
-		// Generate description using AI (placeholder for now)
 		const description = await generateImageDescription(imageBuffer);
 
 		return {
@@ -194,152 +229,102 @@ const processImage = async (
 const generateImageDescription = async (
 	imageBuffer: Buffer,
 ): Promise<string> => {
-	// Placeholder for AI-powered image description
-	// In a real implementation, this would use a vision model
 	try {
-		const metadata = await sharp(imageBuffer).metadata();
-		return `Image with dimensions ${metadata.width}x${metadata.height} in ${metadata.format} format`;
+		const analysis = await geminiVisionService.analyzeImage(imageBuffer);
+		return analysis.description || "Image description unavailable";
 	} catch (error) {
-		logger.error("Error generating image description:", error);
-		return "Image description unavailable";
+		logger.warn(
+			"Gemini Vision unavailable, using fallback description:",
+			error,
+		);
+		try {
+			const metadata = await sharp(imageBuffer).metadata();
+			return `Image with dimensions ${metadata.width}x${metadata.height} in ${metadata.format} format`;
+		} catch (metadataError) {
+			logger.error("Error generating image description:", metadataError);
+			return "Image description unavailable";
+		}
 	}
 };
 
-const detectLanguage = (text: string): string => {
-	// Basic language detection (placeholder)
-	// In a real implementation, use a proper language detection library
-	const commonEnglishWords = [
-		"the",
-		"and",
-		"or",
-		"but",
-		"in",
-		"on",
-		"at",
-		"to",
-		"for",
-		"of",
-		"with",
-		"by",
-	];
-	const words = text.toLowerCase().split(/\s+/).slice(0, 100);
-	const englishWordCount = words.filter((word) =>
-		commonEnglishWords.includes(word),
-	).length;
-
-	return englishWordCount > words.length * 0.1 ? "en" : "unknown";
+const detectLanguage = async (text: string): Promise<string> => {
+	try {
+		return await documentCategorizationService.detectDocumentLanguage(text);
+	} catch (error) {
+		logger.warn("AI language detection unavailable, using fallback:", error);
+		const commonEnglishWords = ["the", "and", "or", "but", "in", "on", "at"];
+		const words = text.toLowerCase().split(/\s+/).slice(0, 100);
+		const englishWordCount = words.filter((word) =>
+			commonEnglishWords.includes(word),
+		).length;
+		return englishWordCount > words.length * 0.1 ? "en" : "unknown";
+	}
 };
 
 const extractEntities = async (text: string): Promise<string[]> => {
-	// Placeholder for named entity recognition
-	// In a real implementation, use NLP libraries like spaCy or transformers
-	const entities: string[] = [];
+	try {
+		const extractedEntities =
+			await documentCategorizationService.extractEntities(text);
 
-	// Simple regex patterns for common entities
-	const emailPattern = /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/g;
-	const phonePattern = /\b\d{3}[-.]?\d{3}[-.]?\d{4}\b/g;
-	const urlPattern = /https?:\/\/[^\s]+/g;
+		const entities: string[] = [
+			...(extractedEntities.people || []),
+			...(extractedEntities.organizations || []),
+			...(extractedEntities.locations || []),
+			...(extractedEntities.emails || []),
+			...(extractedEntities.phoneNumbers || []),
+			...(extractedEntities.urls || []),
+		];
 
-	const emails = text.match(emailPattern) || [];
-	const phones = text.match(phonePattern) || [];
-	const urls = text.match(urlPattern) || [];
-
-	entities.push(...emails, ...phones, ...urls);
-
-	return [...new Set(entities)]; // Remove duplicates
+		return [...new Set(entities)];
+	} catch (error) {
+		logger.warn("AI entity extraction unavailable, using fallback:", error);
+		const entities: string[] = [];
+		const emailPattern = /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/g;
+		const emails = text.match(emailPattern) || [];
+		entities.push(...emails);
+		return [...new Set(entities)];
+	}
 };
 
 const generateSummary = async (
 	text: string,
-	maxLength: number = 200,
+	maxLength: number = 1000,
 ): Promise<string> => {
-	// Simple extractive summarization
-	const sentences = text.split(/[.!?]+/).filter((s) => s.trim().length > 10);
-
-	if (sentences.length <= 3) {
+	try {
+		const summary = await summarizationService.generateParagraphSummary(text);
+		return summary.length > maxLength
+			? `${summary.substring(0, maxLength)}...`
+			: summary;
+	} catch (error) {
+		logger.warn("AI summarization unavailable, using fallback:", error);
 		return text.substring(0, maxLength);
 	}
-
-	// Score sentences by word frequency
-	const words = text.toLowerCase().match(/\b\w+\b/g) || [];
-	const wordFreq: Record<string, number> = {};
-
-	words.forEach((word) => {
-		wordFreq[word] = (wordFreq[word] || 0) + 1;
-	});
-
-	const sentenceScores = sentences.map((sentence) => {
-		const sentenceWords = sentence.toLowerCase().match(/\b\w+\b/g) || [];
-		let score = 0;
-		sentenceWords.forEach((word) => {
-			score += wordFreq[word] || 0;
-		});
-		return { sentence: sentence.trim(), score };
-	});
-
-	// Get top sentences
-	sentenceScores.sort((a, b) => b.score - a.score);
-	const topSentences = sentenceScores.slice(0, 3).map((s) => s.sentence);
-
-	const summary = `${topSentences.join(". ")}.`;
-	return summary.length > maxLength
-		? `${summary.substring(0, maxLength)}...`
-		: summary;
 };
 
 const analyzeSentiment = async (text: string): Promise<number> => {
-	// Simple sentiment analysis (-1 to 1)
-	const positiveWords = [
-		"good",
-		"great",
-		"excellent",
-		"amazing",
-		"wonderful",
-		"fantastic",
-		"positive",
-		"success",
-	];
-	const negativeWords = [
-		"bad",
-		"terrible",
-		"awful",
-		"horrible",
-		"negative",
-		"failure",
-		"problem",
-		"issue",
-	];
-
-	const words = text.toLowerCase().match(/\b\w+\b/g) || [];
-	let score = 0;
-
-	words.forEach((word) => {
-		if (positiveWords.includes(word)) score += 1;
-		if (negativeWords.includes(word)) score -= 1;
-	});
-
-	return Math.max(-1, Math.min(1, (score / words.length) * 10));
+	try {
+		return await documentCategorizationService.analyzeSentiment(text);
+	} catch (error) {
+		logger.warn("AI sentiment analysis unavailable, using fallback:", error);
+		return 0;
+	}
 };
 
 const extractAuthor = (text: string): string | undefined => {
-	// Simple author extraction (placeholder)
 	const authorPatterns = [
 		/(?:author|writer|by):\s*([A-Z][a-z]+ [A-Z][a-z]+)/gi,
 		/([A-Z][a-z]+ [A-Z][a-z]+)/g,
 	];
-
 	for (const pattern of authorPatterns) {
 		const match = text.match(pattern);
 		if (match?.[1]) {
 			return match[1];
 		}
 	}
-
 	return undefined;
 };
 
 const extractKeywords = (text: string): string[] => {
-	// Simple keyword extraction (placeholder)
 	const words =
 		text
 			.toLowerCase()
@@ -351,7 +336,6 @@ const extractKeywords = (text: string): string[] => {
 		wordFreq[word] = (wordFreq[word] || 0) + 1;
 	});
 
-	// Get top 10 most frequent words
 	return Object.entries(wordFreq)
 		.sort(([, a], [, b]) => b - a)
 		.slice(0, 10)

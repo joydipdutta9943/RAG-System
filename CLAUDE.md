@@ -359,22 +359,78 @@ export default helperUtils;
 ## MIDDLEWARE PATTERN
 
 ### Auth Middleware (`src/middleware/authMiddleware.ts`):
+
+**IMPORTANT: This project uses COOKIE-BASED AUTHENTICATION, not token-based authentication.**
+
 ```typescript
-import { Request, Response, NextFunction } from 'express';
+import type { NextFunction, Request, Response } from 'express';
 import type { AuthenticatedRequest } from '../types/authTypes';
 
-const authenticateToken = (req: AuthenticatedRequest, res: Response, next: NextFunction): void => { /* auth logic */ };
-const authorizeRoles = (roles: string[]) => (req: AuthenticatedRequest, res: Response, next: NextFunction): void => { /* role logic */ };
-const validateApiKey = (req: Request, res: Response, next: NextFunction): void => { /* api key logic */ };
-
-const authMiddleware = {
-  authenticateToken,
-  authorizeRoles,
-  validateApiKey
+// Cookie-based authentication (reads JWT from cookies)
+const authenticateCookie = (req: AuthenticatedRequest, res: Response, next: NextFunction): void => {
+  /* Reads token from req.cookies.token and verifies it */
 };
 
-export default authMiddleware;
+const authorizeRoles = (roles: string[]) => (req: AuthenticatedRequest, res: Response, next: NextFunction): void => {
+  /* Checks if authenticated user has required role */
+};
+
+const validateApiKey = (req: Request, res: Response, next: NextFunction): void => {
+  /* Validates API key from headers for API access */
+};
+
+const optionalAuth = (req: AuthenticatedRequest, res: Response, next: NextFunction): void => {
+  /* Optionally authenticates but doesn't fail if no cookie present */
+};
+
+// Pre-configured middleware functions
+const requireAuth = createAuthMiddleware({ requireAuth: true });
+const requireAdmin = createAuthMiddleware({ requireAuth: true, allowedRoles: ['ADMIN'] });
+const requireModeratorOrAdmin = createAuthMiddleware({ requireAuth: true, allowedRoles: ['ADMIN', 'MODERATOR'] });
+const optionalAuthMiddleware = createAuthMiddleware({ requireAuth: false });
+const apiKeyAuth = createAuthMiddleware({ requireAuth: true, allowApiKeys: true });
+
+export const authMiddleware = {
+  authenticateCookie,
+  authorizeRoles,
+  validateApiKey,
+  optionalAuth,
+  requireAuth,           // ← USE THIS for protected routes
+  requireAdmin,          // ← USE THIS for admin-only routes
+  requireModeratorOrAdmin,
+  optionalAuthMiddleware,
+  apiKeyAuth
+};
 ```
+
+**Authentication Pattern:**
+- ✅ **ALWAYS use `authMiddleware.requireAuth`** for protected routes
+- ✅ **ALWAYS use `authMiddleware.requireAdmin`** for admin-only routes
+- ✅ **NEVER use `authMiddleware.authenticateToken`** - it doesn't exist
+- Authentication reads JWT from HTTP-only cookies, not from Authorization headers
+- Cookies are set automatically on login/register
+
+### Rate Limit Middleware (`src/middleware/rateLimit.ts`):
+
+**IMPORTANT: Use the correct rate limit middleware for each route type.**
+
+```typescript
+const rateLimitMiddleware = {
+  generalRateLimit,      // ← General API endpoints (100 req/15min)
+  uploadRateLimit,       // ← File upload endpoints (5 req/min)
+  aiQueryRateLimit,      // ← AI/Search queries (10 req/min)
+  authRateLimit          // ← Auth endpoints (5 req/15min)
+};
+
+export default rateLimitMiddleware;
+```
+
+**Rate Limit Pattern:**
+- ✅ **ALWAYS use `rateLimitMiddleware.uploadRateLimit`** for file upload routes
+- ✅ **ALWAYS use `rateLimitMiddleware.aiQueryRateLimit`** for AI/search/vision routes
+- ✅ **ALWAYS use `rateLimitMiddleware.authRateLimit`** for login/register routes
+- ✅ **ALWAYS use `rateLimitMiddleware.generalRateLimit`** for general API routes
+- ✅ **NEVER use `rateLimitMiddleware.searchRateLimit`** - it doesn't exist
 
 ## TYPE DEFINITIONS
 
@@ -484,8 +540,8 @@ import uploadMiddleware from "../middleware/upload.js";
 
 const router = express.Router();
 
-// Apply authentication to all routes
-router.use(authMiddleware.authenticateToken);
+// Apply cookie-based authentication to all routes
+router.use(authMiddleware.requireAuth);
 
 // Upload single document
 router.post(

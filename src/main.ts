@@ -5,11 +5,12 @@ import type { Logger } from "winston";
 import { logger } from "./config/logger.js";
 import loaderService from "./loaders/index.js";
 import errorHandlerMiddleware from "./middleware/errorHandlerMiddleware.js";
+import agentRoutes from "./routes/agent.js";
+// Import routes
 // Import routes
 import authRoutes from "./routes/auth.js";
 import documentRoutes from "./routes/documents.js";
 import healthRoutes from "./routes/healthRoutes.js";
-import searchRoutes from "./routes/search.js";
 // Import services
 import {
 	aiAgentLangchainService,
@@ -43,7 +44,7 @@ const startServer = async () => {
 		// API routes - MUST be registered BEFORE creating HTTP server
 		express.use("/api/auth", authRoutes);
 		express.use("/api/documents", documentRoutes);
-		express.use("/api/search", searchRoutes);
+		express.use("/api/agent", agentRoutes);
 		express.use("/health", healthRoutes.setupHealthRoutes());
 
 		console.log("🛣️  Routes registered");
