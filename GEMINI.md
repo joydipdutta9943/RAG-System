@@ -23,6 +23,10 @@ src/
 │   ├── aiAgentLangchain.ts    # CORE: Main Agent Orchestrator
 │   ├── geminiVisionService.ts # Vision & Image Analysis
 │   ├── documentProcessorService.ts
+│   ├── documentCategorizationService.ts
+│   ├── embeddingService.ts
+│   ├── summarizationService.ts
+│   ├── userService.ts
 │   ├── vectorSearchService.ts
 │   └── ...
 ├── utils/             # Helpers & Constants
@@ -47,7 +51,7 @@ const initialize = (): void => {
   // Initialize LangChain Agent with tools
 };
 
-const processQuery = async (query: string, context: any): Promise<AgentResponse> => {
+const processAgentMessage = async (query: string, context: any, file?: any): Promise<AgentResponse> => {
   // 1. Analyze intent
   // 2. Select tool (e.g., Vector Search, Vision)
   // 3. Execute and format response
@@ -55,7 +59,7 @@ const processQuery = async (query: string, context: any): Promise<AgentResponse>
 
 const aiAgentLangchainService = {
   initialize,
-  processQuery,
+  processAgentMessage,
 };
 
 export default aiAgentLangchainService;
