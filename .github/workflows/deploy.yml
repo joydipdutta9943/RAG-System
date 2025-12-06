@@ -11,6 +11,7 @@ env:
   REGION: asia-south1              # Iowa (Low CO2, cheap)
   REPO_NAME: rag-system-backend    # Name of your Artifact Registry Repo
   SERVICE_NAME: rag-system-backend # Name of your Cloud Run Service
+  GAR_LOCATION: asia-south1-docker.pkg.dev
 
 jobs:
   deploy:
@@ -53,6 +54,7 @@ jobs:
           service: ${{ env.SERVICE_NAME }}
           region: ${{ env.REGION }}
           image: ${{ env.GAR_LOCATION }}/${{ env.PROJECT_ID }}/${{ env.REPO_NAME }}/${{ env.SERVICE_NAME }}:${{ github.sha }}
+          env_vars: ${{ secrets.APP_ENV_FILE }}
           flags: |
             --allow-unauthenticated
             --memory=2Gi

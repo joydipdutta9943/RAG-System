@@ -4,27 +4,19 @@ import { logger } from "../config/logger.js";
 import { documentProcessorService, embeddingService } from "./index.js";
 
 // Create queues
-export const documentProcessingQueue = new Bull("document processing", {
 	redis: {
-		host: process.env.REDIS_HOST || "localhost",
-		port: parseInt(process.env.REDIS_PORT || "6379", 10),
-		password: process.env.REDIS_PASSWORD,
+		url: process.env.REDIS_URL || "redis://localhost:6379",
 	},
-});
 
 export const embeddingQueue = new Bull("embedding generation", {
 	redis: {
-		host: process.env.REDIS_HOST || "localhost",
-		port: parseInt(process.env.REDIS_PORT || "6379", 10),
-		password: process.env.REDIS_PASSWORD,
+		url: process.env.REDIS_URL || "redis://localhost:6379",
 	},
 });
 
 export const analyticsQueue = new Bull("analytics processing", {
 	redis: {
-		host: process.env.REDIS_HOST || "localhost",
-		port: parseInt(process.env.REDIS_PORT || "6379", 10),
-		password: process.env.REDIS_PASSWORD,
+		url: process.env.REDIS_URL || "redis://localhost:6379",
 	},
 });
 
