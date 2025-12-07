@@ -4,21 +4,16 @@ import { logger } from "../config/logger.js";
 import { documentProcessorService, embeddingService } from "./index.js";
 
 // Create queues
-	redis: {
-		url: process.env.REDIS_URL || "redis://localhost:6379",
-	},
+const redisUrl = process.env.REDIS_URL || "redis://localhost:6379";
 
-export const embeddingQueue = new Bull("embedding generation", {
-	redis: {
-		url: process.env.REDIS_URL || "redis://localhost:6379",
-	},
-});
+export const documentProcessingQueue = new Bull(
+	"document processing",
+	redisUrl,
+);
 
-export const analyticsQueue = new Bull("analytics processing", {
-	redis: {
-		url: process.env.REDIS_URL || "redis://localhost:6379",
-	},
-});
+export const embeddingQueue = new Bull("embedding generation", redisUrl);
+
+export const analyticsQueue = new Bull("analytics processing", redisUrl);
 
 // Initialize services
 // Services are now imported as functional modules from services/index.js

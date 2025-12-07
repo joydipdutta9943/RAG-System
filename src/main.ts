@@ -75,9 +75,6 @@ const startServer = async () => {
 			console.log(
 				`🚀 Enhanced RAG System server running on port ${APP_CONFIG.PORT}`,
 			);
-			logger.info(
-				`🚀 Enhanced RAG System server running on port ${APP_CONFIG.PORT}`,
-			);
 			logger.info(`📚 Environment: ${APP_CONFIG.ENVIRONMENT}`);
 			logger.info(
 				`🔗 Health check: http://localhost:${APP_CONFIG.PORT}/health`,

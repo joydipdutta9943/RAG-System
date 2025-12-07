@@ -1,5 +1,4 @@
 import { PrismaClient } from "@prisma/client";
-import { createClient } from "redis";
 
 // Prisma Client with logging
 export const prisma = new PrismaClient({
@@ -23,19 +22,14 @@ export const prisma = new PrismaClient({
 	],
 });
 
-// Redis Client
-export const redis = createClient({
-	url: process.env.REDIS_URL || "redis://localhost:6379",
-});
+// Redis will be initialized in the loader and passed as dependency
+// This avoids creating multiple Redis connections
 
 // Database connection and event handlers
 export async function connectDatabase() {
 	try {
 		await prisma.$connect();
 		console.log("✅ Connected to MongoDB via Prisma");
-
-		await redis.connect();
-		console.log("✅ Connected to Redis");
 
 		// Setup Prisma logging
 		prisma.$on("query", (e) => {
@@ -57,6 +51,5 @@ export async function connectDatabase() {
 
 export async function disconnectDatabase() {
 	await prisma.$disconnect();
-	await redis.disconnect();
-	console.log("🔌 Disconnected from databases");
+	console.log("🔌 Disconnected from MongoDB");
 }
