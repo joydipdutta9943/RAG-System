@@ -8,7 +8,7 @@ const requiredEnvVars = [
 ];
 
 const optionalEnvVars = [
-  'GOOGLE_API_KEY',
+  'GOOGLE_AI_API_KEY',
   'FRONTEND_URL'
 ];
 
@@ -39,6 +39,6 @@ console.log(`🌍 NODE_ENV: ${process.env.NODE_ENV || 'development'}`);
 console.log(`🗄️  DATABASE_URL: ${process.env.DATABASE_URL ? 'Set' : 'Not set'}`);
 console.log(`🔴 REDIS_URL: ${process.env.REDIS_URL ? 'Set' : 'Not set'}`);
 console.log(`🔑 JWT_SECRET: ${process.env.JWT_SECRET ? 'Set' : 'Not set'}`);
-console.log(`🤖 GOOGLE_API_KEY: ${process.env.GOOGLE_API_KEY ? 'Set' : 'Not set'}`);
+console.log(`🤖 GOOGLE_AI_API_KEY: ${process.env.GOOGLE_AI_API_KEY ? 'Set' : 'Not set'}`);
 
 process.exit(0);
