@@ -46,13 +46,13 @@ jobs:
           region: ${{ env.REGION }}
           image: ${{ env.GAR_LOCATION }}/${{ env.PROJECT_ID }}/${{ env.REPO_NAME }}/${{ env.SERVICE_NAME }}:${{ github.sha }}
           # This injects your BIG secret file as environment variables
+          # Note: PORT should not be included as Cloud Run sets it automatically
           env_vars: ${{ secrets.APP_ENV_FILE }}
           flags: |
             --allow-unauthenticated
             --memory=2Gi
             --cpu=1
             --max-instances=3
-            --port=8080
 
       - name: Cleanup Old Images
         run: |
