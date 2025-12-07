@@ -35,15 +35,17 @@ COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 # Copy application code
 COPY . .
 
-# Cloud Run ignores HEALTHCHECK in Dockerfile, but it's good for local testing
-# We remove it here to save a tiny bit of layer overhead, 
-# relying instead on Cloud Run's built-in health probes.
+# Health check for Cloud Run and local testing
 
 # Set Environment Variables
 ENV NODE_ENV=production
 # Cloud Run injects the PORT variable automatically (usually 8080)
-ENV PORT=8080
+# Do NOT set PORT here - Cloud Run will set it for us
 EXPOSE 8080
 
-# Start command
-CMD ["bun", "run", "src/main.ts"]
+# Health check (optional, Cloud Run has built-in health checks)
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+  CMD curl -f http://localhost:$PORT/health || exit 1
+
+# Start command with pre-startup validation
+CMD ["sh", "-c", "bun run scripts/prestart-check.ts && bun run index.ts"]
