@@ -1,6 +1,6 @@
+import type { Prisma, PrismaClient, Role as PrismaRole } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
-import type { Collection } from "mongodb";
 import { logger } from "../config/logger.js";
 import userRepository from "../repositories/userRepository.js";
 import type { TokenPayload } from "../types/authTypes.js";
@@ -14,9 +14,11 @@ import type {
 import { SECURITY_CONFIG } from "../utils/constantUtils.js";
 import { errorUtils, helperUtils, validatorUtils } from "../utils/index.js";
 
+type UserDelegate = PrismaClient["user"];
+
 const createUser = async (
 	userData: UserCreateData,
-	collection: Collection,
+	userCollection: UserDelegate,
 ): Promise<UserResponse> => {
 	try {
 		// Validate input
@@ -29,7 +31,7 @@ const createUser = async (
 
 		// Check if user already exists
 		const existingUser = await userRepository.findByEmail(
-			collection,
+			userCollection,
 			userData.email,
 		);
 		if (existingUser) {
@@ -46,7 +48,7 @@ const createUser = async (
 
 		// Create user
 		const user = await userRepository.createWithHashedPassword(
-			collection,
+			userCollection,
 			userData,
 			hashedPassword,
 		);
@@ -71,10 +73,10 @@ const createUser = async (
 
 const getUserById = async (
 	userId: string,
-	collection: Collection,
+	userCollection: UserDelegate,
 ): Promise<UserResponse | null> => {
 	try {
-		const user = await userRepository.findById(collection, userId);
+		const user = await userRepository.findById(userCollection, userId);
 		if (!user) {
 			return null;
 		}
@@ -90,16 +92,18 @@ const getUserById = async (
 		};
 	} catch (error) {
 		logger.error("Error getting user by ID:", error);
-		throw errorUtils.createError("Failed to get user");
+		throw errorUtils.isOperationalError(error)
+			? error
+			: errorUtils.createError("Failed to get user");
 	}
 };
 
 const getUserByEmail = async (
 	email: string,
-	collection: Collection,
+	userCollection: UserDelegate,
 ): Promise<UserResponse | null> => {
 	try {
-		const user = await userRepository.findByEmail(collection, email);
+		const user = await userRepository.findByEmail(userCollection, email);
 		if (!user) {
 			return null;
 		}
@@ -115,14 +119,16 @@ const getUserByEmail = async (
 		};
 	} catch (error) {
 		logger.error("Error getting user by email:", error);
-		throw errorUtils.createError("Failed to get user by email");
+		throw errorUtils.isOperationalError(error)
+			? error
+			: errorUtils.createError("Failed to get user by email");
 	}
 };
 
 const updateUser = async (
 	userId: string,
 	updateData: UserUpdateData,
-	collection: Collection,
+	userCollection: UserDelegate,
 ): Promise<UserResponse> => {
 	try {
 		// Validate input
@@ -134,7 +140,7 @@ const updateUser = async (
 		}
 
 		// Check if user exists
-		const existingUser = await userRepository.findById(collection, userId);
+		const existingUser = await userRepository.findById(userCollection, userId);
 		if (!existingUser) {
 			throw errorUtils.createNotFoundError("User not found");
 		}
@@ -153,7 +159,7 @@ const updateUser = async (
 
 		// Update user
 		const updatedUser = await userRepository.updateById(
-			collection,
+			userCollection,
 			userId,
 			finalUpdateData,
 		);
@@ -177,15 +183,15 @@ const updateUser = async (
 
 const deleteUser = async (
 	userId: string,
-	collection: Collection,
+	userCollection: UserDelegate,
 ): Promise<boolean> => {
 	try {
-		const existingUser = await userRepository.findById(collection, userId);
+		const existingUser = await userRepository.findById(userCollection, userId);
 		if (!existingUser) {
 			throw errorUtils.createNotFoundError("User not found");
 		}
 
-		return await userRepository.deleteById(collection, userId);
+		return await userRepository.deleteById(userCollection, userId);
 	} catch (error) {
 		logger.error("Error deleting user:", error);
 		throw errorUtils.isOperationalError(error)
@@ -195,7 +201,7 @@ const deleteUser = async (
 };
 
 const getAllUsers = async (
-	collection: Collection,
+	userCollection: UserDelegate,
 	options: { page?: number; limit?: number; role?: string } = {},
 ): Promise<{
 	users: UserResponse[];
@@ -208,20 +214,20 @@ const getAllUsers = async (
 		const { offset } = helperUtils.calculatePagination(page, limit);
 
 		// Build query
-		const query: any = {};
+		const query: Prisma.UserWhereInput = {};
 		if (role) {
-			query.role = role;
+			query.role = role as PrismaRole;
 		}
 
 		// Get users
-		const users = await userRepository.findMany(collection, query, {
+		const users = await userRepository.findMany(userCollection, query, {
 			skip: offset,
-			limit,
-			sort: { createdAt: -1 },
+			take: limit,
+			orderBy: { createdAt: "desc" },
 		});
 
 		// Get total count
-		const total = await userRepository.count(collection, query);
+		const total = await userRepository.count(userCollection, query);
 		const totalPages = Math.ceil(total / limit);
 
 		const userResponses: UserResponse[] = users.map((user) => ({
@@ -242,13 +248,15 @@ const getAllUsers = async (
 		};
 	} catch (error) {
 		logger.error("Error getting all users:", error);
-		throw errorUtils.createError("Failed to get users");
+		throw errorUtils.isOperationalError(error)
+			? error
+			: errorUtils.createError("Failed to get users");
 	}
 };
 
 const authenticateUser = async (
 	credentials: LoginCredentials,
-	collection: Collection,
+	userCollection: UserDelegate,
 ): Promise<UserResponse> => {
 	try {
 		// Validate input
@@ -261,7 +269,7 @@ const authenticateUser = async (
 
 		// Find user by email
 		const user = await userRepository.findByEmail(
-			collection,
+			userCollection,
 			credentials.email,
 		);
 		if (!user) {
@@ -304,7 +312,7 @@ const authenticateUser = async (
 
 const registerUser = async (
 	registerData: RegisterData,
-	collection: Collection,
+	userCollection: UserDelegate,
 ): Promise<UserResponse> => {
 	try {
 		// Validate input
@@ -329,7 +337,7 @@ const registerUser = async (
 		};
 
 		// Create user
-		const user = await createUser(userData, collection);
+		const user = await createUser(userData, userCollection);
 
 		logger.info(`User registered successfully: ${user.email}`);
 		return user;
@@ -390,11 +398,11 @@ const changePassword = async (
 	userId: string,
 	currentPassword: string,
 	newPassword: string,
-	collection: Collection,
+	userCollection: UserDelegate,
 ): Promise<void> => {
 	try {
 		// Get user
-		const user = await userRepository.findById(collection, userId);
+		const user = await userRepository.findById(userCollection, userId);
 		if (!user) {
 			throw errorUtils.createNotFoundError("User not found");
 		}
@@ -417,7 +425,11 @@ const changePassword = async (
 		);
 
 		// Update password
-		await userRepository.updatePassword(collection, userId, hashedNewPassword);
+		await userRepository.updatePassword(
+			userCollection,
+			userId,
+			hashedNewPassword,
+		);
 
 		logger.info(`Password changed successfully for user: ${user.email}`);
 	} catch (error) {

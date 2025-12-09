@@ -3,6 +3,7 @@ import { body } from "express-validator";
 import { authController } from "../controllers/index.js";
 import authMiddleware from "../middleware/authMiddleware.js";
 import { rateLimitMiddleware } from "../middleware/index.js";
+import validatorUtils from "../utils/validatorUtils.js";
 
 const router = express.Router();
 
@@ -40,6 +41,26 @@ router.get(
 	"/profile",
 	authMiddleware.requireAuth,
 	authController.getProfileHandler,
+);
+
+// Update current user profile (protected)
+router.patch(
+	"/profile",
+	authMiddleware.requireAuth,
+	[
+		body()
+			.custom((value, { req }) => {
+				const validation = validatorUtils.validateUpdateUser(req.body);
+				if (!validation.success) {
+					throw new Error(
+						validatorUtils.formatZodError(validation.error)[0].message,
+					);
+				}
+				return true;
+			})
+			.withMessage("Invalid update data provided"),
+	],
+	authController.updateProfileHandler,
 );
 
 // Logout

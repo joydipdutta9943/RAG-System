@@ -1,126 +1,188 @@
-import type { Collection } from "mongodb";
+import type { Prisma, PrismaClient, Role as PrismaRole } from "@prisma/client";
 import type {
 	User,
 	UserCreateData,
 	UserUpdateData,
 } from "../types/userTypes.js";
-import baseRepository from "./baseRepository.js";
 
-// User-specific repository functions
+type UserDelegate = PrismaClient["user"];
+
+const findById = async (
+	userCollection: UserDelegate,
+	id: string,
+): Promise<User | null> => {
+	return userCollection.findUnique({
+		where: { id },
+	});
+};
+
 const findByEmail = async (
-	collection: Collection,
+	userCollection: UserDelegate,
 	email: string,
 ): Promise<User | null> => {
-	return baseRepository.findOne<User>(collection, { email });
+	return userCollection.findUnique({
+		where: { email },
+	});
+};
+
+const createOne = async (
+	userCollection: UserDelegate,
+	data: UserCreateData,
+): Promise<User> => {
+	return userCollection.create({ data });
 };
 
 const createWithHashedPassword = async (
-	collection: Collection,
+	userCollection: UserDelegate,
 	userData: UserCreateData,
 	hashedPassword: string,
 ): Promise<User> => {
-	const userDataToCreate = {
-		...userData,
-		password: hashedPassword,
-		createdAt: new Date(),
-		updatedAt: new Date(),
-	};
+	return userCollection.create({
+		data: {
+			...userData,
+			password: hashedPassword,
+		},
+	});
+};
 
-	return baseRepository.createOne<User>(collection, userDataToCreate);
+const updateById = async (
+	userCollection: UserDelegate,
+	id: string,
+	data: UserUpdateData,
+): Promise<User> => {
+	return userCollection.update({
+		where: { id },
+		data: {
+			...data,
+			updatedAt: new Date(),
+		},
+	});
 };
 
 const updatePassword = async (
-	collection: Collection,
-	userId: string,
+	userCollection: UserDelegate,
+	id: string,
 	hashedPassword: string,
 ): Promise<User> => {
-	return baseRepository.updateById<User>(collection, userId, {
-		password: hashedPassword,
-		updatedAt: new Date(),
+	return userCollection.update({
+		where: { id },
+		data: {
+			password: hashedPassword,
+			updatedAt: new Date(),
+		},
 	});
+};
+
+const deleteById = async (
+	userCollection: UserDelegate,
+	id: string,
+): Promise<boolean> => {
+	const result = await userCollection.delete({
+		where: { id },
+	});
+	return result !== null; // Prisma delete returns the deleted object or throws error if not found
+};
+
+const count = async (
+	userCollection: UserDelegate,
+	query: Prisma.UserWhereInput = {},
+): Promise<number> => {
+	return userCollection.count({
+		where: query,
+	});
+};
+
+const findMany = async (
+	userCollection: UserDelegate,
+	query: Prisma.UserWhereInput = {},
+	options: {
+		skip?: number;
+		take?: number;
+		orderBy?: Prisma.UserOrderByWithRelationInput;
+	} = {},
+): Promise<User[]> => {
+	return userCollection.findMany({
+		where: query,
+		skip: options.skip,
+		take: options.take,
+		orderBy: options.orderBy,
+	});
+};
+
+const exists = async (
+	userCollection: UserDelegate,
+	query: Prisma.UserWhereInput,
+): Promise<boolean> => {
+	const user = await userCollection.findFirst({
+		where: query,
+		select: { id: true },
+	});
+	return user !== null;
 };
 
 const findUsersByRole = async (
-	collection: Collection,
+	userCollection: UserDelegate,
 	role: string,
 	options: { limit?: number; skip?: number } = {},
 ): Promise<User[]> => {
-	const queryOptions: any = {};
-	if (options.limit) queryOptions.limit = options.limit;
-	if (options.skip) queryOptions.skip = options.skip;
-
-	return baseRepository.findMany<User>(collection, { role }, queryOptions);
+	return findMany(
+		userCollection,
+		{ role: role as PrismaRole },
+		{ skip: options.skip, take: options.limit },
+	);
 };
 
 const countUsersByRole = async (
-	collection: Collection,
+	userCollection: UserDelegate,
 	role: string,
 ): Promise<number> => {
-	return baseRepository.count(collection, { role });
+	return userCollection.count({
+		where: { role: role as PrismaRole },
+	});
 };
 
 const searchUsers = async (
-	collection: Collection,
+	userCollection: UserDelegate,
 	searchTerm: string,
 	options: { limit?: number; skip?: number } = {},
 ): Promise<User[]> => {
-	const query = {
-		$or: [
-			{ name: { $regex: searchTerm, $options: "i" } },
-			{ email: { $regex: searchTerm, $options: "i" } },
-		],
-	};
-
-	const queryOptions: any = {};
-	if (options.limit) queryOptions.limit = options.limit;
-	if (options.skip) queryOptions.skip = options.skip;
-
-	return baseRepository.findMany<User>(collection, query, queryOptions);
+	return findMany(
+		userCollection,
+		{
+			OR: [
+				{ name: { contains: searchTerm, mode: "insensitive" } },
+				{ email: { contains: searchTerm, mode: "insensitive" } },
+			],
+		},
+		{ skip: options.skip, take: options.limit },
+	);
 };
 
 const deactivateUser = async (
-	collection: Collection,
+	userCollection: UserDelegate,
 	userId: string,
 ): Promise<User> => {
-	return baseRepository.updateById<User>(collection, userId, {
-		isActive: false,
-		updatedAt: new Date(),
-	});
+	return updateById(userCollection, userId, { isActive: false });
 };
 
 const activateUser = async (
-	collection: Collection,
+	userCollection: UserDelegate,
 	userId: string,
 ): Promise<User> => {
-	return baseRepository.updateById<User>(collection, userId, {
-		isActive: true,
-		updatedAt: new Date(),
-	});
+	return updateById(userCollection, userId, { isActive: true });
 };
 
 const userRepository = {
-	// Base repository methods
-	findById: (collection: Collection, id: string) =>
-		baseRepository.findById<User>(collection, id),
-	findOne: (collection: Collection, query: any) =>
-		baseRepository.findOne<User>(collection, query),
-	findMany: (collection: Collection, query?: any, options?: any) =>
-		baseRepository.findMany<User>(collection, query, options),
-	createOne: (collection: Collection, data: UserCreateData) =>
-		baseRepository.createOne<User>(collection, data),
-	updateById: (collection: Collection, id: string, data: UserUpdateData) =>
-		baseRepository.updateById<User>(collection, id, data),
-	deleteById: (collection: Collection, id: string) =>
-		baseRepository.deleteById(collection, id),
-	count: (collection: Collection, query?: any) =>
-		baseRepository.count(collection, query),
-	exists: (collection: Collection, query: any) =>
-		baseRepository.exists(collection, query),
-
-	// User-specific methods
+	findById,
 	findByEmail,
+	createOne,
 	createWithHashedPassword,
+	updateById,
 	updatePassword,
+	deleteById,
+	count,
+	findMany,
+	exists,
 	findUsersByRole,
 	countUsersByRole,
 	searchUsers,

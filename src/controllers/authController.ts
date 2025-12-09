@@ -212,11 +212,62 @@ const logoutHandler = async (
 	}
 };
 
+const updateProfileHandler = async (
+	req: express.Request,
+	res: express.Response,
+): Promise<express.Response> => {
+	try {
+		const errors = validationResult(req);
+		if (!errors.isEmpty()) {
+			return res.status(400).json({ errors: errors.array() });
+		}
+
+		const token = req.cookies?.token;
+		if (!token) {
+			return res.status(401).json({ error: "Authentication required" });
+		}
+
+		const decoded = userService.verifyToken(token) as TokenPayload;
+		if (!decoded || !decoded.id) {
+			return res.status(401).json({ error: "Invalid session" });
+		}
+
+		const userId = decoded.id;
+		const updateData = req.body;
+
+		const updatedUser = await userService.updateUser(
+			userId,
+			updateData,
+			prisma.user,
+		);
+
+		logger.info(`User profile updated for ID: ${userId}`);
+
+		return res.json({
+			message: "User profile updated successfully",
+			user: updatedUser,
+		});
+	} catch (error) {
+		logger.error("Profile update error:", error);
+		if (error instanceof Error && error.message.includes("not found")) {
+			return res.status(404).json({ error: error.message });
+		}
+		if (
+			error instanceof Error &&
+			error.message.includes("Invalid or expired token")
+		) {
+			return res.status(401).json({ error: "Invalid session" });
+		}
+		return res.status(500).json({ error: "Internal server error" });
+	}
+};
+
 const authController = {
 	registerHandler,
 	loginHandler,
 	getProfileHandler,
 	logoutHandler,
+	updateProfileHandler,
 };
 
 export default authController;
